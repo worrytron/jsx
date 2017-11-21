@@ -10,10 +10,10 @@
  *
  * @module espnCore
  *
- * @version 1.0.2
+ * @version 1.0.3
  * @author mark.rohrer@espn.com
  * 
- * 8/15/2017
+ * 12/11/2017
  *
  */
 
@@ -92,6 +92,7 @@ function ProductionData ( id ) {
     this.pubroot   = 'NULL';
 
     this.teamdata  = false;
+    this.showdata  = false;
     this.platdata  = false;
     this.platid    = '';
     this.is_live   = null;
@@ -132,6 +133,22 @@ function ProductionData ( id ) {
             this.teamdata = true;
         }
     };
+    /*
+     * LOAD SHOW DATA TODO: ADD COMMENTS
+     */
+    this.loadShowData = function () {
+        if (!this.showdata || this.name != this.shows["ESPN_META"]["production"]) {
+            var showDb = getJson (this.prod_db[this.name]["json"]["shows"] );
+            var showList = new Array();
+            for (t in showDb) {
+                if ((s == "NULL") || (s == "ESPN_META")) continue;
+                showList.push(s);
+            }
+            this.shows = showDb;
+            this.showlist = showList;
+            this.showdata = true;
+        }
+    }
     /*
      * This method loads the requested  platform database (ex: ae.json) for a production and
      * stores a copy in a member called ProductionData.plat_db.
