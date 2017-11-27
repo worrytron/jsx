@@ -18,19 +18,20 @@
  */
 
 $.evalFile(((new File($.fileName)).parent).toString() + '/json2.js');
+var scriptRoot = "Y:/Workspace/SCRIPTS/.ESPNDevTools";
 
 espnCore = {
     'schema'       : [1.0, 1.0],
-    'version'      : [1,0,2],
-    'date'         : "8/15/2017",
+    'version'      : [1,0,3],
+    'date'         : "12/15/2017",
     'platform'     : null,
     'dashboard'    : "0. Dashboard",
-    'nasRoot'      : "Y:/Workspace",
-    'pubRoot'      : "Y:/PublishData",
-    'log_dir'      : "Y:/Workspace/SCRIPTS/ESPNTools/.logs/{0}",
-    'global_db'    : "Y:/Workspace/SCRIPTS/ESPNTools/.json/productions.json",
-    'global_assets': "Y:/Workspace/SCRIPTS/ESPNTools/.json/global_assets.json"
+    'logs'         : scriptRoot + "/.logs/{0}",
+    'prodJson'     : scriptRoot + "/.json/{0}/{1}.json",
+    'globJson'     : scriptRoot + "/.json/{0}.json"
 };
+
+
 
 /**
  * STATUS flags assist in the flow of execution while a scene is in the process of being
@@ -61,7 +62,8 @@ STATUS = {
  * null ProductionData object.
  */
 function ProductionData ( id ) {
-    this.prod_db = getJson( espnCore['global_db'] );
+    var globalDb = espnCore['globJson'].format('productions');
+    this.prod_db = getJson( globalDb );
     if (!this.prod_db){
         alert('Issue loading global production database.');
         return null;
@@ -122,7 +124,8 @@ function ProductionData ( id ) {
      */
     this.loadTeamData = function () {
         if (!this.teamdata || this.name != this.teams["ESPN_META"]["production"]) {
-            var teamDb = getJson( this.prod_db[this.name]["json"]["teams"] );
+            var teamJson = espnCore['prodJson'].format(this.name, "teams");
+            var teamDb = getJson( teamJson );
             var teamList = new Array();
             for (t in teamDb){
                 if ((t == "NULL") || (t == "ESPN_META")) continue;
@@ -137,17 +140,16 @@ function ProductionData ( id ) {
      * LOAD SHOW DATA TODO: ADD COMMENTS
      */
     this.loadShowData = function () {
-        if (!this.showdata || this.name != this.shows["ESPN_META"]["production"]) {
-            var showDb = getJson (this.prod_db[this.name]["json"]["shows"] );
-            var showList = new Array();
-            for (t in showDb) {
-                if ((s == "NULL") || (s == "ESPN_META")) continue;
-                showList.push(s);
-            }
-            this.shows = showDb;
-            this.showlist = showList;
-            this.showdata = true;
+        var showJson = espnCore['prodJson'].format(this.name, "shows");
+        var showDb = getJson ( showJson );
+        var showList = new Array();
+        for (s in showDb) {
+            if ((s == "NULL") || (s == "ESPN_META")) continue;
+            showList.push(s);
         }
+        this.shows = showDb;
+        this.showlist = showList;
+        this.showdata = true;
     }
     /*
      * This method loads the requested  platform database (ex: ae.json) for a production and
@@ -156,7 +158,8 @@ function ProductionData ( id ) {
      */
     this.loadPlatformData = function ( platform_id ) {
         if (!this.platdata || this.name != this.plat_db["ESPN_META"]["production"]){
-            var platDb = getJson( this.prod_db[this.name]["json"][platform_id] );
+            var platJson = espnCore['prodJson'].format(this.name, platform_id);
+            var platDb = getJson( platJson );
             this.platid = platform_id;
             this.plat_db  = platDb;
             this.platdata = true;
@@ -168,6 +171,7 @@ function ProductionData ( id ) {
      */
     this.reload = function(){
         if (this.teamdata) this.loadTeamData();
+        if (this.showdata) this.loadShowData()
         if (this.platdata) this.loadPlatformData(this.platid);
     };
     /**
@@ -307,6 +311,8 @@ function SceneData ( prodData, plat_id ) {
     this.show = "";
     // Current sponsor id
     this.sponsor = "";
+    
+    this.prod.loadShowData();
 
     // Status and tagging objects used in platform integration
     this.status = STATUS.UNDEFINED;
@@ -321,6 +327,7 @@ function SceneData ( prodData, plat_id ) {
             this.prod.load( prod );
             this.prod.loadPlatformData(this.platform);
             this.prod.loadTeamData();
+            this.prod.loadShowData();
             this.version = 0;
         }
         if (!this.prod.is_live)
@@ -729,7 +736,7 @@ function Log ( platform ) {
     // The windows username of the artist whose logs are being written
     var userid  = $.getenv("USERNAME");
     // logfile location on the server
-    var logDir  = new Folder(espnCore["log_dir"].format(userid));
+    var logDir  = new Folder(espnCore["logs"].format(userid));
     var logfile = new File("{0}/{1}.txt".format(logDir.fullName, platform));
     // preflight checks
     if (userid === undefined || userid === null) 
@@ -822,6 +829,7 @@ function Log ( platform ) {
  * @returns {Object} A copy of JSON data
  */
 function getJson (fileRef) {
+    $.writeln(fileRef);
     var db;
     //alert ('accessing: ' + fileRef);
     if (typeof fileRef === 'string') {
@@ -837,6 +845,7 @@ function getJson (fileRef) {
         var data = fileRef.read();
         db = JSON.parse(data);
     } catch (e) {
+        alert('!!');
         var log = new Log();
         log.write(0, 'Could not parse JSON! >> {0}'.format(fileRef.fullName));
         db = null;
@@ -909,7 +918,8 @@ function isFolder (FileObj) {
   * @returns {Array} An array of production id keys / names
   */
 function getActiveProductions () {
-    var prod_db = getJson (espnCore.global_db);
+    var prodJson = espnCore['globJson'].format("productions")
+    var prod_db = getJson ( prodJson );
     var prodList = [];
     for (k in prod_db){
         if (!prod_db.hasOwnProperty(k)) continue;
@@ -946,7 +956,8 @@ function getAllProjects( prodData ) {
   * @returns {Object} A JSON object with lookups for asset locations on the server
   */
 function getGlobalAssets() {
-    var globalAssetData = getJson( espnCore.global_assets );
+    var assetJson = espnCore["globJson"].format("global_assets");
+    var globalAssetData = getJson( assetJson );
     return globalAssetData;
 }
 
