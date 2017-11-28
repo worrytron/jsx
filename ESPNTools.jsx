@@ -526,13 +526,12 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
     function changedShow () {
         var showid = dlg.grp.tabs.version.div.fields.shows.dd.selection;
         if (showid.toString() === liveScene.show.id) return null;
-        alert(showid.toString());
         liveScene.setShow(showid.toString());
         
-        //switchShow();
+        switchShow();
         switchDashboardTag();
-        //switchCustomAssets('show');
-        //evaluserScripts('show');
+        switchCustomAssets('show');
+        evaluserScripts('show');
     }
     /*
      * Updates the tempScene.sponsor data when the dropdown is changed
@@ -1116,10 +1115,10 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
     function switchShow () {
         var msg = "Parts of your project template seem to be missing. Run Build Template to repair it.";
         
-        var logoBin = getItem( liveScene.templateLookup('shows_bin'), FolderItem );
+        var logoBin = getItem( liveScene.templateLookup('shows0_bin'), FolderItem );
         var dashComp = getItem( liveScene.templateLookup('dashboard') );
         var showLogoFolder = new File( liveScene.getFolder( 'showlogos2d') );
-        var newLogoSheet = new File( '{0}/{1}.ai'.format(showLogoFolder.fullName, liveScene.show.name ) );
+        var newLogoSheet = new File( '{0}/{1}.ai'.format(showLogoFolder.fullName, liveScene.show.id ) );
         if (dashComp === undefined ||
             logoBin === undefined  ||
             !showLogoFolder.exists ||
