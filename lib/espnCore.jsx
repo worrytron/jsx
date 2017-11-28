@@ -689,7 +689,11 @@ function SceneData ( prodData, plat_id ) {
       */
     this.getFolder = function ( lookup ) {
         (lookup === undefined) ? lookup = '{0}_project' : null;
-        return this.prod.folders[lookup.format(this.platform)].format(this.project);
+        
+        var root = this.prod.root;
+        var fold = this.prod.folders[lookup.format(this.platform)];
+        
+        return (root + fold).format(this.project);
     };
     /**
       * This function searches the platform project template data recursively, looking for the
