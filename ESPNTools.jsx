@@ -3,9 +3,9 @@
  * @summary A suite of templating, toolkitting and automation tools for ESPN's AfterEffects
  * graphics and animation pipeline.
  *
- * @version 1.0.2
+ * @version 1.0.3
  * @author mark.rohrer@espn.com
- * @date 8/15/2017
+ * @date 12/15/2017
  *
  */
 
@@ -117,8 +117,8 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
         
         populateExpressionsDropdown();
         
-        //populateShows();
-        //setShow(liveScene.show);
+        populateShowsDropdown();
+        setShow(liveScene.show.id);
         
         //populateSponsors();
         //setSponsor(liveScene.sponsor);
@@ -212,7 +212,25 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
     /*
      * Adds this production's shows to the dropdown menu
      */  
-    function populateShowsDropdown () {}
+    function populateShowsDropdown (useTempScene) {
+        var shows = dlg.grp.tabs.version.div.fields.shows.dd;
+        
+        shows.removeAll();
+        
+        if (!useTempScene || useTempScene === undefined){
+            liveScene.prod.loadShowData();
+            for (i in liveScene.prod.showlist){
+                if (!liveScene.prod.showlist.hasOwnProperty(i)) continue;
+                shows.add("item", liveScene.prod.showlist[i]);
+            }
+        } else {
+            tempScene.prod.loadShowData();
+            for (i in tempScene.prod.showlist){
+                if (!tempScene.prod.showlist.hasOwnProperty(i)) continue;
+                shows.add("item", tempScene.prod.showlist[i]);
+            }
+        }
+    }
     /*
      * Adds this production's sponsors to the dropdown menu
      */ 
@@ -251,8 +269,8 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
         dlg.grp.tabs.setup.projectName.pick.dd.removeAll();
         dlg.grp.tabs.version.div.fields.team.dd.removeAll();
         dlg.grp.tabs.version.div.fields.away.dd.removeAll();
+        dlg.grp.tabs.version.div.fields.shows.dd.removeAll();
         // +sponsors
-        // +shows       
         // text fields
         dlg.grp.tabs.setup.sceneName.e.text = "";
         dlg.grp.tabs.version.div.fields.customA.et.text = "";
@@ -329,6 +347,16 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
         }
     }
     /*
+     * TODO: COMMENTS
+     */
+    function setShowMenu ( show ){
+        var i = liveScene.prod.showlist.indexOf(show);
+        if ( i === -1 ){
+        } else {
+            dlg.grp.tabs.version.div.fields.shows.dd.selection = i;
+        }
+    }
+    /*
      * Sets the custom text fields in the UI
      * @param {string} a,b,c,d - Strings for custom text fields A thru D (all 4 required in order)
      */    
@@ -397,8 +425,8 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
         setEmptyMenus();
         populateProjectsDropdown(true);
         populateTeamsDropdown(true);
-        populateShowsDropdown();
-        populateSponsorsDropdown();
+        populateShowsDropdown(true);
+        //populateSponsorsDropdown();
         populateExpressionsDropdown();
     }
     /*
@@ -495,7 +523,17 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
     /*
      * Updates the tempScene.show data when the dropdown is changed
      */      
-    function changedShow () {}
+    function changedShow () {
+        var showid = dlg.grp.tabs.version.div.fields.shows.dd.selection;
+        if (showid.toString() === liveScene.show.id) return null;
+        alert(showid.toString());
+        liveScene.setShow(showid.toString());
+        
+        //switchShow();
+        switchDashboardTag();
+        //switchCustomAssets('show');
+        //evaluserScripts('show');
+    }
     /*
      * Updates the tempScene.sponsor data when the dropdown is changed
      */        
@@ -812,22 +850,24 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
         // Get the project items needed
         var homeLogosheetComp = getItem( liveScene.templateLookup('teamsheet') );
         var awayLogosheetComp = getItem( liveScene.templateLookup('awaysheet') );
+        var showLogosheetComp = getItem( liveScene.templateLookup('showsheet') );
         var precompsBin       = getItem( liveScene.templateLookup('precomps_bin'), FolderItem );
         // If any are missing, bail out
-        if (homeLogosheetComp === undefined || awayLogosheetComp === undefined || precompsBin === undefined) {
+        if (homeLogosheetComp === undefined || awayLogosheetComp === undefined || showLogosheetComp === undefined || precompsBin === undefined) {
             liveScene.log.write(ERR, errorMessages['missing_template']);
         }
         // Get the precomp layout from the platform database (only teams right now)
-        var layout = liveScene.prod.getPlatformData()['Team Logosheet'];
+        var teamLayout = liveScene.prod.getPlatformData()['Team Logosheet'];
+        var showLayout = liveScene.prod.getPlatformData()['Show Logosheet'];
         
-        // Builds the comps for a team, adding "HOME" or "AWAY" to the precomp names
-        // This is so that the team layout can be defined once in the database instead of twice.
+        // Builds the comps for a logosheet based on the JSON data stored in the production's ae.json.
+        // 'tag' is an optional flag that will prepend a string to the precomp names (e.g. for HOME and AWAY)
         function buildComps(layout, sheet, bin, tag) {
             // c is a comp defined in the logosheet JSON data
             for (c in layout){
                 if (!layout.hasOwnProperty(c)) continue;
                 // Add "HOME" or "AWAY" to the comp name
-                var name = "{0} {1}".format(tag, c);
+                if (tag !== undefined) var name = "{0} {1}".format(tag, c);
                 // Skip the comp if it already exists
                 var comp = getItem(name);
                 if (comp !== undefined){
@@ -845,10 +885,16 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
         }
         // Build the home and away team precomps
         try {
-            buildComps( layout, homeLogosheetComp, precompsBin, 'HOME' );
-            buildComps( layout, awayLogosheetComp, precompsBin, 'AWAY' );
+            buildComps( teamLayout, homeLogosheetComp, precompsBin, 'HOME' );
+            buildComps( teamLayout, awayLogosheetComp, precompsBin, 'AWAY' );
         } catch(e) {
             liveScene.log.write(ERR, errorMessages['failed_build'], e);
+        }
+        
+        try {
+            buildComps( showLayout, showLogosheetComp, precompsBin );
+        } catch(e) {
+            liveScene.log.write(WARN, errorMessages['failed_build'], e);
         }
     }
     /*
@@ -924,6 +970,52 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
         }
     }
     /*
+     * TODO: COMMENTS
+     */
+    function loadShowAssets () {
+        function AIFile (fileObj) {
+            if (fileObj.name.indexOf('.ai') > -1)
+                return true;
+        }
+        // Don't load show assets for "NULL" production
+        if (liveScene.prod.name === "NULL") return false;
+        // Get project template objects needed for loading
+        var showLogosheetComp = getItem( liveScene.templateLookup('showsheet') );
+        var showLogosheetBin = getItem( liveScene.templateLookup('shows0_bin'), FolderItem );
+        
+        if (!showLogosheetComp ||
+            !showLogosheetBin) {
+            liveScene.log.write(ERR, errorMessages['missing_template']);
+            return false;
+        }
+        
+        try{
+            var showsFolder = new Folder( liveScene.getFolder("showlogos2d") );
+            var firstFile = teamFolder.getFiles(AIFile)[0];
+            
+            var imOptions = new ImportOptions();
+            imOptions.file = firstFile;
+            imOptions.sequence = false;
+            imOptions.importAs = ImportAsType.FOOTAGE;
+            
+            if (showLogosheetBin.numItems === 0) {
+                var showAiFile = app.project.importFile(imOptions);
+                showAiFile.parentFolder = showLogosheetBin;
+            }
+            
+            var lyr;
+            try {
+                lyr = showLogosheetComp.layer(1);
+            } catch(e) {
+                lyr = showLogosheetComp.layers.add(showAiFile);
+            }
+            lyr.collapseTransformation = true;
+            return true;
+        } catch(e) {
+            liveScene.log.write(ERR, "loadShowAssets: " + errorMessages['failed_build'], e);
+        }
+    }
+    /*
      * This looks for any custom asset bins in the current project and will load the correct
      * custom asset footage into the bin.
      */
@@ -981,7 +1073,7 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
         var msg = "Parts of your project template seem to be missing. Run Build Template to repair it.";
         // Gather up and validate all the required AE objects
         // lookup the team logo slick project bin
-        var logoBin = getItem( liveScene.templateLookup('teams{0}_bin'.format(idx)), FolderItem);
+        var logoBin = getItem( liveScene.templateLookup('teams{0}_bin'.format(idx)), FolderItem );
         // dashboard
         var dashComp = getItem( liveScene.templateLookup('dashboard') );
         // lookup the production's team logo slick folder 
@@ -994,10 +1086,10 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
             !teamLogoFolder.exists || 
             !newLogoSheet.exists   ||
             logoBin.numItems === 0)
-        {
-            liveScene.log.write(ERR, errorMessages['missing_template']);
-            return null;
-        }
+            {
+                liveScene.log.write(ERR, errorMessages['missing_template']);
+                return null;
+            }
         
         // replace the logo slick
         var logoSheet = logoBin.item(1);
@@ -1021,7 +1113,25 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
         }
     }
     
-    function switchShow () {}
+    function switchShow () {
+        var msg = "Parts of your project template seem to be missing. Run Build Template to repair it.";
+        
+        var logoBin = getItem( liveScene.templateLookup('shows_bin'), FolderItem );
+        var dashComp = getItem( liveScene.templateLookup('dashboard') );
+        var showLogoFolder = new File( liveScene.getFolder( 'showlogos2d') );
+        var newLogoSheet = new File( '{0}/{1}.ai'.format(showLogoFolder.fullName, liveScene.show.name ) );
+        if (dashComp === undefined ||
+            logoBin === undefined  ||
+            !showLogoFolder.exists ||
+            !newLogoSheet.exists   ||
+            logoBin.numItems === 0)
+            {
+                liveScene.log.write(ERR, errorMessages['missing_template']);
+                return null;
+            }
+        var logoSheet = logoBin.item(1);
+        logoSheet.replace(newLogoSheet);
+    }
     
     function switchSponsor () {}
 
@@ -1419,6 +1529,7 @@ if (scene != '') (project + '_' + scene + ' v{3}') else (project + ' v{3}');""".
             // Versioning Tab
             dlg.grp.tabs.version.div.fields.team.dd.onChange = changedHomeTeam;
             dlg.grp.tabs.version.div.fields.away.dd.onChange = changedAwayTeam;
+            dlg.grp.tabs.version.div.fields.shows.dd.onChange = changedShow;
             dlg.grp.tabs.version.div.fields.customA.et.onChange = changedCustomText;
             dlg.grp.tabs.version.div.fields.customB.et.onChange = changedCustomText;
             dlg.grp.tabs.version.div.fields.customC.et.onChange = changedCustomText;

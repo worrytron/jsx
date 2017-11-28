@@ -434,7 +434,8 @@ function SceneData ( prodData, plat_id ) {
      */
     this.setShow = function ( showid ) {
         if (showid !== undefined){
-            this.show = showid;
+            this.show = new ShowData( this.prod, showid );
+            alert(this.show.id);
         }
         if (this.status >= STATUS.UNSAVED)
             this.status = STATUS.UNSAVED;
@@ -445,7 +446,7 @@ function SceneData ( prodData, plat_id ) {
      */
     this.setSponsor = function ( sponsorid ) {
         if (sponsorid !== undefined){
-            this.show = sponsorid;
+            this.sponsor = new SponsorData( this.prod, sponsorid );
         } 
         if (this.status >= STATUS.UNSAVED)
             this.status = STATUS.UNSAVED;
@@ -544,8 +545,8 @@ function SceneData ( prodData, plat_id ) {
       */
     this.getFullPath = function () {
         var output = {
-            'primary': this.getFolder('{0}_project'.format(this.platform)) + '/' + this.getName(),
-            'backup' : this.getFolder('{0}_backup'.format(this.platform)) + '/' + this.getName(true)
+            'primary': this.getFolder('{0}_project') + '/' + this.getName(),
+            'backup' : this.getFolder('{0}_backup') + '/' + this.getName(true)
         };
         return output;
     };
@@ -579,8 +580,8 @@ function SceneData ( prodData, plat_id ) {
         var namingOrder = [
             [this.use_team0id, this.teams[0].tricode],
             [this.use_team1id, this.teams[1].tricode],
-            [this.use_showid, this.show],
-            [this.use_sponsorid, this.sponsor],
+            [this.use_showid, this.show.id],
+            [this.use_sponsorid, this.sponsor.tricode],
             [this.use_customA, this.customA],
             [this.use_customB, this.customB],
             [this.use_customC, this.customC],
@@ -631,7 +632,7 @@ function SceneData ( prodData, plat_id ) {
         var namingOrder = [
             [this.use_team0id, this.teams[0].tricode],
             [this.use_team1id, this.teams[1].tricode],
-            [this.use_showid, this.show],
+            [this.use_showid, this.show.id],
             [this.use_sponsorid, this.sponsor],
             [this.use_customA, this.customA],
             [this.use_customB, this.customB],
@@ -667,7 +668,7 @@ function SceneData ( prodData, plat_id ) {
             'project':  this.project,
             'scene'  :  this.name,
             'version':  this.version,
-            'show'   : (this.show !== "") ? [this.show, this.use_showid] : ['NULL', false],
+            'show'   : (this.show !== "") ? [this.show.id, this.use_showid] : ['NULL', false],
             'sponsor': (this.sponsor !== "") ? [this.sponsor, this.use_sponsorid] : ['NULL', false],
             'customA': [this.customA, this.use_customA],
             'customB': [this.customB, this.use_customB],
@@ -882,7 +883,6 @@ function Log ( platform ) {
  * @returns {Object} A copy of JSON data
  */
 function getJson (fileRef) {
-    $.writeln(fileRef);
     var db;
     //alert ('accessing: ' + fileRef);
     if (typeof fileRef === 'string') {
@@ -898,7 +898,7 @@ function getJson (fileRef) {
         var data = fileRef.read();
         db = JSON.parse(data);
     } catch (e) {
-        alert('!JSON FORMATTING ERROR!');
+        alert('!JSON ERROR!\n' + fileRef.fullName);
         var log = new Log();
         log.write(0, 'Could not parse JSON! >> {0}'.format(fileRef.fullName));
         db = null;
@@ -947,7 +947,7 @@ function createFolders (root, map) {
  * Creates a project folder structure for the given SceneData object
  */
 function createProject (sceneData) {
-    var projectRoot = sceneData.getFolder('animroot') + '/' + sceneData.project;
+    var projectRoot = sceneData.getFolder('projectroot');
     projectRoot = createFolder( projectRoot );
     createFolders( projectRoot.fullName, sceneData.prod.projstruct );
 }
@@ -989,7 +989,7 @@ function getActiveProductions () {
 function getAllProjects( prodData ) {
     (prodData instanceof ProductionData) ? null : prodData = new ProductionData( prodData );
     // get the root animation directory of the production
-    var projectFolder = new Folder(prodData.folders["animroot"]);
+    var projectFolder = new Folder(prodData.root + prodData.folders["animroot"]);
     // get all folders from that directory
     var subFolders = projectFolder.getFiles(isFolder);
     // return list

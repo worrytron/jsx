@@ -51,7 +51,7 @@ group {
                         heading: StaticText { text:'Away:', alignment:['left','top'], preferredSize:[40, 20] },
                         dd: DropDownList { alignment:['fill','top'], preferredSize:[-1, 20] }
                     },
-                    prod: Group {
+                    shows: Group {
                         orientation: 'row',
                         heading: StaticText { text:'Show:', alignment:['left','top'], preferredSize:[40, 20] },
                         dd: DropDownList { alignment:['fill','top'], preferredSize:[-1, 20] }
