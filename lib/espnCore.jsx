@@ -18,6 +18,7 @@
  */
 
 $.evalFile(((new File($.fileName)).parent).toString() + '/json2.js');
+
 var scriptRoot = "Y:/Workspace/SCRIPTS/.ESPNDevTools";
 
 espnCore = {
@@ -31,15 +32,13 @@ espnCore = {
     'globJson'     : scriptRoot + "/.json/{0}.json"
 };
 
-
-
 /**
  * STATUS flags assist in the flow of execution while a scene is in the process of being
  * modified. Various functions will set changed states, and validation functions will 
  * then modify the status to reflect the result of validation.
  */
 STATUS = {
-    'UNDEFINED'  : 0999, // no tag data found / miscellaneous bad news
+    'UNDEFINED'  : 0999, // new instance / no tag data found / miscellaneous bad news
     'NO_DEST'    : 1000, // destination folders do not exist
     'CHECK_DEST' : 1001, // a version/name change cascade must be validated
     'UNSAVED'    : 1002, // set during team changes, template builds, etc. soft warning state.
@@ -152,6 +151,21 @@ function ProductionData ( id ) {
         this.showdata = true;
     }
     /*
+     * LOAD SPONSOR DATA TODO: ADD COMMENTS
+     */
+    this.loadSponsorData = function () {
+        var sponsorJson = espnCore['prodJson'].format(this.name, "sponsors");
+        var sponsorDb = getJson ( sponsorJson );
+        var sponsorList = new Array();
+        for (s in sponsorDb) {
+            if ((s == "NULL") || (s == "ESPN_META")) continue;
+            sponsorList.push(s);
+        }
+        this.sponsors = sponsorDb;
+        this.sponsorlist = sponsorList;
+        this.sponsordata = true;
+    }
+    /*
      * This method loads the requested  platform database (ex: ae.json) for a production and
      * stores a copy in a member called ProductionData.plat_db.
      * @param {string} platform_id - The id of the platform being requested (ex. "ae", "c4d")
@@ -171,7 +185,7 @@ function ProductionData ( id ) {
      */
     this.reload = function(){
         if (this.teamdata) this.loadTeamData();
-        if (this.showdata) this.loadShowData()
+        if (this.showdata) this.loadShowData();
         if (this.platdata) this.loadPlatformData(this.platid);
     };
     /**
@@ -215,7 +229,6 @@ function ProductionData ( id ) {
     /* Construction command -- load the production associated with the passed id key */
     this.load(id);
 }
-
 /**
  * TeamData is an object with built-in functions to load & validate team data from JSON
  * @constructor
@@ -247,6 +260,44 @@ function TeamData ( prodData, id ) {
     this.tier       = prodData.teams[id]['TIER'];
     this.primary    = "0x{0}".format(prodData.teams[id]['PRIMARY']);
     this.secondary  = "0x{0}".format(prodData.teams[id]['SECONDARY']);
+}
+/**
+ * ShowData is an object with built-in functions to load & validate show data from JSON
+ * @constructor
+ * @param {[String|ProductionData]} prodData - a Production id or ProductionData object
+ * @param {string} id - A show's JSON key. Varies by production -- typically tricode.
+ */
+function ShowData ( prodData, id ) {
+    (id === null) ? id = 'NULL' : null;
+    
+    if (!prodData instanceof ProductionData){
+        prodData = new ProductionData(prodData);
+    }
+    
+    if (!prodData.showdata) prodData.loadShowData();
+    
+    this.id      = id;
+    this.tricode = prodData.shows[id]["TRI"];
+    this.name    = prodData.shows[id]["NAME"];
+}
+/**
+ * SponsorData is an object with built-in functions to load & validate sponsor data from JSON
+ * @constructor
+ * @param {[String|ProductionData]} prodData - a Production id or ProductionData object
+ * @param {string} id - A sponsor's JSON key. Varies by production -- typically a name.
+ */
+function SponsorData ( prodData, id ){
+    (id === null) ? id = 'NULL' : null;
+    
+    if (!prodData instanceof ProductionData) {
+        prodData = new ProductionData(prodData);
+    }
+    
+    if (!prodData.sponsordata) prodData.loadSponsorData();
+    
+    this.id      = id;
+    this.tricode = prodData.sponsors[id]["TRI"];
+    this.name    = prodData.sponsors[id]["NAME"];
 }
 
 /*************************************************************************************************
@@ -303,18 +354,16 @@ function SceneData ( prodData, plat_id ) {
     this.use_customD = false;
     
     // Versioning/production-context attributes
-    // Current team(s)
+    // Init teamdata
     this.teams = new Array();
     this.teams[0] = new TeamData(this.prod, 'NULL');
     this.teams[1] = new TeamData(this.prod, 'NULL');
-    // Current show id
-    this.show = "";
-    // Current sponsor id
-    this.sponsor = "";
-    
-    this.prod.loadShowData();
+    // Init showdata
+    this.show = new ShowData(this.prod, 'NULL');
+    // Init sponsordata
+    this.sponsor = new SponsorData(this.prod, 'NULL');
 
-    // Status and tagging objects used in platform integration
+    // Set scene status to initialized state
     this.status = STATUS.UNDEFINED;
     
     /*
@@ -845,7 +894,7 @@ function getJson (fileRef) {
         var data = fileRef.read();
         db = JSON.parse(data);
     } catch (e) {
-        alert('!!');
+        alert('!JSON FORMATTING ERROR!');
         var log = new Log();
         log.write(0, 'Could not parse JSON! >> {0}'.format(fileRef.fullName));
         db = null;

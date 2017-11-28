@@ -16,16 +16,17 @@
 
 1.0.3 - before 12/11
 ===================================================================================================
-* Add show & sponsor logo sheet switching
-* Convert scripted AE template to standalone version (e.g. for edit toolkits)
-* V: drive rendering option
+* Added show & sponsor logo sheet switching
+* User-selected render folder option
+* Improved OSX support (for ESPN devices)
+* Changed all internal path mapping to relative
 
 1.0.4 - before xmas
 ===================================================================================================
 * Thoroughly test & extend C4D support for 3D assets
 * More render output templates (720p, 1080p, separate matte&fill, etc)
 * Remove requirement for render output templates to be built by user
-* Improved OSX support (for ESPN devices)
+* Convert scripted AE template to standalone version (e.g. for edit toolkits)
 
 1.1.0 - early 2018
 ===================================================================================================
