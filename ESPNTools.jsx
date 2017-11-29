@@ -704,6 +704,7 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
         var fontSizeSm = 33;
         // Text layer names for versioning
         var textLayers = [
+            "SHOW NAME",
             "TEAM NAME",
             "NICKNAME",
             "LOCATION",
@@ -876,13 +877,17 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
                     continue;
                 }
                 // Build the comp from JSON data
-                comp = app.project.items.addComp(name, layout[c]["Size"][0], layout[c]["Size"][1], 1.0, 60, 59.94);
-                comp.parentFolder = bin;
-                layer = comp.layers.add(sheet);
-                layer.position.setValue(layout[c]["Pos"]);
-                layer.anchorPoint.setValue(layout[c]["Anx"]);
-                layer.scale.setValue(layout[c]["Scl"]);
-                layer.collapseTransformation = true;
+                try {
+                    comp = app.project.items.addComp(name, layout[c]["Size"][0], layout[c]["Size"][1], 1.0, 60, 59.94);
+                    comp.parentFolder = bin;
+                    layer = comp.layers.add(sheet);
+                    layer.position.setValue(layout[c]["Pos"]);
+                    layer.anchorPoint.setValue(layout[c]["Anx"]);
+                    layer.scale.setValue(layout[c]["Scl"]);
+                    layer.collapseTransformation = true;                    
+                } catch(e) {
+                    liveScene.log.write(WARN, errorMessages['missing_template'], e);
+                }
             }
         }
         // Build the home and away team precomps
@@ -1014,7 +1019,7 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
             lyr.collapseTransformation = true;
             return true;
         } catch(e) {
-            liveScene.log.write(ERR, "loadShowAssets: " + errorMessages['failed_build'], e);
+            liveScene.log.write(WARN, "loadShowAssets: " + errorMessages['failed_build'], e);
         }
     }
     /*
@@ -1114,7 +1119,9 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
             liveScene.log.write(ERR, errorMessages['missing_textlayers'], e);
         }
     }
-    
+    /*
+     * TODO: ADD COMMENTS
+     */
     function switchShow () {
         var msg = "Parts of your project template seem to be missing. Run Build Template to repair it.";
         
@@ -1133,10 +1140,18 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
             }
         var logoSheet = logoBin.item(1);
         logoSheet.replace(newLogoSheet);
+        
+        try {
+            dashComp.layer('SHOW NAME').property('Text').property('Source Text').setValue(liveScene.show.name.toUpperCase());
+        } catch (e) {
+            liveScene.log.write(WARN, errorMessages['missing_textlayers'], e);
+        }
     }
     
     function switchSponsor () {}
-
+    /*
+     * TODO: ADD COMMENTS
+     */
     function switchCustomText () {
         var dashComp = getItem( liveScene.templateLookup('dashboard') );
         if (dashComp === undefined){
