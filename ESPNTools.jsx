@@ -118,10 +118,10 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
         populateExpressionsDropdown();
         
         populateShowsDropdown();
-        setShow(liveScene.show.id);
+        setShowMenu(liveScene.show.id);
         
         //populateSponsors();
-        //setSponsor(liveScene.sponsor);
+        //setSponsorMenu(liveScene.sponsor);
         
         setCustomTextMenu(
             liveScene.customA,
@@ -684,6 +684,8 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
         buildDashboard();
         buildGuidelayer();
         loadTeamAssets();
+        loadShowAssets();
+        //loadSponsorAssets();
         loadCustomAssets();
         buildToolkittedPrecomps();
     }
@@ -866,7 +868,8 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
             for (c in layout){
                 if (!layout.hasOwnProperty(c)) continue;
                 // Add "HOME" or "AWAY" to the comp name
-                if (tag !== undefined) var name = "{0} {1}".format(tag, c);
+                var name = c;
+                if (tag !== undefined) name = "{0}{1}".format(tag, name);
                 // Skip the comp if it already exists
                 var comp = getItem(name);
                 if (comp !== undefined){
@@ -884,8 +887,8 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
         }
         // Build the home and away team precomps
         try {
-            buildComps( teamLayout, homeLogosheetComp, precompsBin, 'HOME' );
-            buildComps( teamLayout, awayLogosheetComp, precompsBin, 'AWAY' );
+            buildComps( teamLayout, homeLogosheetComp, precompsBin, 'HOME ' );
+            buildComps( teamLayout, awayLogosheetComp, precompsBin, 'AWAY ' );
         } catch(e) {
             liveScene.log.write(ERR, errorMessages['failed_build'], e);
         }
@@ -989,8 +992,8 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
         }
         
         try{
-            var showsFolder = new Folder( liveScene.getFolder("showlogos2d") );
-            var firstFile = teamFolder.getFiles(AIFile)[0];
+            var showFolder = new Folder( liveScene.getFolder("showlogos2d") );
+            var firstFile = showFolder.getFiles(AIFile)[0];
             
             var imOptions = new ImportOptions();
             imOptions.file = firstFile;

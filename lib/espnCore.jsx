@@ -314,6 +314,7 @@ illegalCharacters = /[.,`~!@#$%^&*()=+\[\]]/;
  * @param {ProductionData} prodData - A ProductionData object with a valid (or null) production
  * @param {string} plat_id - The id of the platform to which the scene belongs
  */
+
 function SceneData ( prodData, plat_id ) {
     // Production global variables 
     if (prodData instanceof ProductionData){
@@ -435,7 +436,6 @@ function SceneData ( prodData, plat_id ) {
     this.setShow = function ( showid ) {
         if (showid !== undefined){
             this.show = new ShowData( this.prod, showid );
-            alert(this.show.id);
         }
         if (this.status >= STATUS.UNSAVED)
             this.status = STATUS.UNSAVED;
@@ -513,26 +513,28 @@ function SceneData ( prodData, plat_id ) {
         if (data['project'] !== this.project){
             this.setProject(data['project']);
         }
-        this.setName(data['scene']);
-        this.setVersion(data['version']);
-        this.setShow(data['show'][0]);
-        this.setSponsor(data['sponsor'][0]);
-        this.setCustom('A', data['customA'][0]);
-        this.setCustom('B', data['customB'][0]);
-        this.setCustom('C', data['customC'][0]);
-        this.setCustom('D', data['customD'][0]);
-        this.setTeam(0, data['team0'][0]);
-        this.setTeam(1, data['team1'][0]);
-        
-        this.use_team0id = data['team0'][1];
-        this.use_team1id = data['team1'][1];
-        this.use_showid = data['show'][1];
-        this.use_sponsorid = data['sponsor'][1];
-        this.use_customA = data['customA'][1];
-        this.use_customB = data['customB'][1];
-        this.use_customC = data['customC'][1];
-        this.use_customD = data['customD'][1];
-        this.status = STATUS.CHECK_DEST;
+        try {
+            this.setName(data['scene']);
+            this.setVersion(data['version']);
+            this.setShow(data['show'][0]);
+            //this.setSponsor(data['sponsor'][0]);
+            this.setCustom('A', data['customA'][0]);
+            this.setCustom('B', data['customB'][0]);
+            this.setCustom('C', data['customC'][0]);
+            this.setCustom('D', data['customD'][0]);
+            this.setTeam(0, data['team0'][0]);
+            this.setTeam(1, data['team1'][0]);
+            this.use_team0id = data['team0'][1];
+            this.use_team1id = data['team1'][1];
+            this.use_showid = data['show'][1];
+            this.use_sponsorid = data['sponsor'][1];
+            this.use_customA = data['customA'][1];
+            this.use_customB = data['customB'][1];
+            this.use_customC = data['customC'][1];
+            this.use_customD = data['customD'][1];
+            this.status = STATUS.CHECK_DEST;            
+        } catch (e) { alert(e.message) }
+
     };
     /**
       * This method retrieves the server location for this SceneData's project file and its backup.
@@ -772,6 +774,18 @@ function SceneData ( prodData, plat_id ) {
       * is a fairly important feature.
       */
     this.postvalidate = function () {};
+    
+    this.dump = function () {
+        var outstr = "";
+        outstr += '\nPlatform: ' + this.platform;
+        outstr += '\nProject : ' + this.fullName;
+        outstr += '\nVersion : ' + this.version;
+        outstr += '\nTeam 0  : ' + this.teams[0].id;
+        outstr += '\nTeam 1  : ' + this.teams[1].id;
+        outstr += '\nShow    : ' + this.show.id;
+        outstr += '\nStatus  : ' + this.status;
+        alert(outstr);
+    }
 }
 
 /*************************************************************************************************
