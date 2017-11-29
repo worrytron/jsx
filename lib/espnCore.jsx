@@ -23,8 +23,6 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/json2.js');
 
 var scriptRoot = new File($.fileName).parent.parent.parent.fsName;
 
-
-
 espnCore = {
     'schema'       : [1.0, 1.0],
     'version'      : [1,0,3],
@@ -697,7 +695,11 @@ function SceneData ( prodData, plat_id ) {
     this.getFolder = function ( lookup ) {
         (lookup === undefined) ? lookup = '{0}_project' : null;
         
-        var root = this.prod.root;
+        if ($.os.indexOf('Windows') > -1)
+            var root = this.prod.root;
+        else if ($.os.indexOf('Macintosh') > -1)
+            var root = this.prod.root.replace('Y:', '//cagenas/cagenas')
+            
         var fold = this.prod.folders[lookup.format(this.platform)];
         
         return (root + fold).format(this.project);
