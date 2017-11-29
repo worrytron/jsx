@@ -698,7 +698,7 @@ function SceneData ( prodData, plat_id ) {
         if ($.os.indexOf('Windows') > -1)
             var root = this.prod.root;
         else if ($.os.indexOf('Macintosh') > -1)
-            var root = this.prod.root.replace('Y:', '//cagenas/cagenas')
+            var root = this.prod.root.replace('Y:', '//Volumes/cagenas')
             
         var fold = this.prod.folders[lookup.format(this.platform)];
         
