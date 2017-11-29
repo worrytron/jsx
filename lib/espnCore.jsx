@@ -19,7 +19,11 @@
 
 $.evalFile(((new File($.fileName)).parent).toString() + '/json2.js');
 
-var scriptRoot = "Y:/Workspace/SCRIPTS/.ESPNDevTools";
+//var scriptRoot = "Y:/Workspace/SCRIPTS/.ESPNDevTools";
+
+var scriptRoot = new File($.fileName).parent.parent.parent.fsName;
+
+
 
 espnCore = {
     'schema'       : [1.0, 1.0],
