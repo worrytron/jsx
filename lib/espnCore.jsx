@@ -17,7 +17,7 @@
  *
  */
 
-$.evalFile(((new File($.fileName)).parent).toString() + '/json2.js');
+$.evalFile(new File($.fileName).parent.fsName.toString() + '/json2.js');
 
 //var scriptRoot = "Y:/Workspace/SCRIPTS/.ESPNDevTools";
 
@@ -698,7 +698,7 @@ function SceneData ( prodData, plat_id ) {
         if ($.os.indexOf('Windows') > -1)
             var root = this.prod.root;
         else if ($.os.indexOf('Macintosh') > -1)
-            var root = this.prod.root.replace('Y:', '//Volumes/cagenas')
+            var root = this.prod.root.replace('Y:', '/Volumes/cagenas')
             
         var fold = this.prod.folders[lookup.format(this.platform)];
         
@@ -808,7 +808,10 @@ function Log ( platform ) {
     // 1: warnings & errors, 2: info, warnings & errors)
     var level   = 1;
     // The windows username of the artist whose logs are being written
-    var userid  = $.getenv("USERNAME");
+    var userid = '';
+    if ($.os.indexOf('Windows') > -1)
+        userid  = $.getenv("USERNAME");
+    else userid = "OSXUSER";
     // logfile location on the server
     var logDir  = new Folder(espnCore["logs"].format(userid));
     var logfile = new File("{0}/{1}.txt".format(logDir.fullName, platform));

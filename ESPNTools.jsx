@@ -819,7 +819,10 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
         if (!botline) {
             try {
                 var imOptions = new ImportOptions();
-                imOptions.file = new File( getGlobalAssets()['bottomline'] );
+                var botline = getGlobalAssets()['bottomline'];
+                if ($.os.indexOf('Macintosh') > -1) 
+                    botline = botline.replace('Y:','/Volumes/cagenas');
+                imOptions.file = new File( botline );
                 imOptions.sequence = false;
                 imOptions.importAs = ImportAsType.FOOTAGE;
                 botline = app.project.importFile(imOptions);
