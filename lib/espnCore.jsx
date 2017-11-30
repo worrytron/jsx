@@ -19,8 +19,6 @@
 
 $.evalFile(new File($.fileName).parent.fsName.toString() + '/json2.js');
 
-//var scriptRoot = "Y:/Workspace/SCRIPTS/.ESPNDevTools";
-
 var scriptRoot = new File($.fileName).parent.parent.parent.fsName;
 
 espnCore = {
@@ -1012,7 +1010,11 @@ function getActiveProductions () {
 function getAllProjects( prodData ) {
     (prodData instanceof ProductionData) ? null : prodData = new ProductionData( prodData );
     // get the root animation directory of the production
-    var projectFolder = new Folder(prodData.root + prodData.folders["animroot"]);
+    root = prodData.root;
+    if ($.os.indexOf('Macintosh') > -1) {
+        root = prodData.root.replace('Y:', '/Volumes/cagenas');
+    }
+    var projectFolder = new Folder(root + prodData.folders["animroot"]);
     // get all folders from that directory
     var subFolders = projectFolder.getFiles(isFolder);
     // return list
