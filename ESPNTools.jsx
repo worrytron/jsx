@@ -690,6 +690,14 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
         buildToolkittedPrecomps();
     }
     /*
+     * TODO: ADD COMMENTS
+     */
+    function buildOfflineProjectTemplate( fresh ) {
+        if (fresh === true) buildProjectTemplate();
+        loadOfflineTeamAssets('team');
+        //loadOfflineTeamAssets('away');
+    }
+    /*
      * This builds and sets up the dashboard comp for the project. This is mostly text layers
      * that are used for toolkit expression links. These text layers get changed directly when 
      * the user interacts with the UI.
@@ -1056,6 +1064,78 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
             }
         }
     }
+    /*
+     * TODO: COMMENTS
+     */
+    function loadOfflineTeamAssets (tag) {
+        (tag === undefined) ? tag = "team" : null;
+        function AIFile (fileObj) {
+            if (fileObj.name.indexOf('.ai') > -1)
+                return true;
+        }
+        try {
+            // get any assets currently in the bin
+            // get master switch comp
+            var precompsBin   = getItem( liveScene.templateLookup('precomps_bin'), FolderItem );
+            var logosheetComp = getItem( liveScene.templateLookup('{0}sheet'.format(tag)) );
+            // get asset bin
+            if (tag === 'team' || tag === 'away')
+                var logosheetBin = getItem( liveScene.templateLookup('teams0_bin'), FolderItem );
+            else var logosheetBin = getItem( liveScene.templateLookup('{0}0_bin'), FolderItem );
+            
+            if (logosheetComp === undefined || precompsBin === undefined) {
+                liveScene.log.write(ERR, errorMessages['missing_template']);
+            }
+            
+            for (i=1; i<=logosheetBin.numItems; i++) {
+                logosheetBin.item(1).remove();
+            }
+            // get all team assets ready to import
+            var assetFolder = new Folder( liveScene.getFolder("{0}logos2d".format(tag)) );
+            var assetList = assetFolder.getFiles(AIFile);
+        } catch (e) {
+            alert(e + '\n' + e.message);
+        }
+        
+        // create a master control layer        
+        var ctrlnull = logosheetComp.layers.addNull();
+        var ctrlsel = ctrlnull.property("Effects").addProperty("Layer Control");
+        (tag === 'team') ? tag = 'HOME' : null;
+        ctrlnull.name = "SELECT {0} TEAM - see effects".format(tag.toUpperCase());
+        ctrlsel.name = "Team Picker";
+        
+        // import all team assets to HOME bin
+        for (t in assetList){
+            if (!assetList.hasOwnProperty(t)) continue;
+            var imOptions  = new ImportOptions();
+            imOptions.file = assetList[t];
+            imOptions.sequence = false;
+            imOptions.importAs = ImportAsType.FOOTAGE;
+            try {
+                var aiFile = app.project.importFile(imOptions);
+                aiFile.parentFolder = logosheetBin;
+                // dump all assets into switch comp
+                var lyr = logosheetComp.layers.add(aiFile);
+                lyr.collapseTransformation = true;
+                lyr.moveToEnd();
+                lyr.opacity.setValue(0);
+                lyr.shy = true;
+                lyr.opacity.expression = "if (thisComp.layer('{0}').effect('{1}')('Layer').index == thisLayer.index) 100 else 0".format(ctrlnull.name, ctrlsel.name);
+            } catch (e) {
+                alert(e + '\n' + e.message);
+            }
+        }
+        logosheetComp.hideShyLayers = true;
+        ctrlsel.property("Layer").setValue(2);        
+    }
+    /*
+     * TODO: COMMENTS
+     */    
+    function loadOfflineShowAssets () {}
+    /*
+     * TODO: COMMENTS
+     */    
+    function loadOfflineCustomAssets () {}
     
     /*********************************************************************************************
      * SWITCH FUNCTIONS
@@ -1526,7 +1606,7 @@ if (scene != '') (project + '_' + scene + ' v{3}') else (project + ' v{3}');""".
             
             // Setup Tab
             dlg.grp.tabs.setup.createTemplate.onClick       = buildProjectTemplate;
-            dlg.grp.tabs.setup.createProject.onClick        = saveWithBackup;
+            dlg.grp.tabs.setup.createProject.onClick        = function () { buildOfflineProjectTemplate() };//saveWithBackup;
             dlg.grp.tabs.setup.production.dd.onChange       = function () { changedProduction() };
             dlg.grp.tabs.setup.projectName.edit.e.onChange  = function () { changedProject() };
             dlg.grp.tabs.setup.projectName.pick.dd.onChange = function () { changedProject() };
