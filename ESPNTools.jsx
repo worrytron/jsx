@@ -693,9 +693,9 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
      * TODO: ADD COMMENTS
      */
     function buildOfflineProjectTemplate( fresh ) {
-        if (fresh === true) buildProjectTemplate();
-        loadOfflineTeamAssets('team');
-        //loadOfflineTeamAssets('away');
+        loadOfflineAssets('team');
+        loadOfflineAssets('show');
+        loadOfflineAssets('away');
     }
     /*
      * This builds and sets up the dashboard comp for the project. This is mostly text layers
@@ -1067,66 +1067,96 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
     /*
      * TODO: COMMENTS
      */
-    function loadOfflineTeamAssets (tag) {
-        (tag === undefined) ? tag = "team" : null;
+    function loadOfflineAssets (tag) {
+        if (tag === undefined) return false;
         function AIFile (fileObj) {
             if (fileObj.name.indexOf('.ai') > -1)
                 return true;
         }
-        try {
-            // get any assets currently in the bin
-            // get master switch comp
-            var precompsBin   = getItem( liveScene.templateLookup('precomps_bin'), FolderItem );
-            var logosheetComp = getItem( liveScene.templateLookup('{0}sheet'.format(tag)) );
-            // get asset bin
-            if (tag === 'team' || tag === 'away')
-                var logosheetBin = getItem( liveScene.templateLookup('teams0_bin'), FolderItem );
-            else var logosheetBin = getItem( liveScene.templateLookup('{0}0_bin'), FolderItem );
+        
+        // 'away' is a special case. we remove all bins and comps that are no longer needed
+        if (tag == 'away') {
+            alert('away mode -->');
+            // duplicate the 'team' comp and rename it
+            var awaysheetBin = getItem( liveScene.templateLookup('teams1_bin'), FolderItem );
+            var awaysheetComp = getItem( liveScene.templateLookup('awaysheet') );
+            alert(awaysheetBin.name);
+            alert(awaysheetComp.name);
+            awaysheetBin.remove();
+            awaysheetComp.remove();
             
-            if (logosheetComp === undefined || precompsBin === undefined) {
+            var teamsheetComp = getItem( liveScene.templateLookup('teamsheet') ); 
+  
+            awaysheetComp = teamsheetComp.duplicate();
+            alert(awaysheetComp.name);
+            awaysheetComp.name = liveScene.templateLookup('awaysheet');
+            alert(awaysheetComp.name);
+            // exit the operation
+            return true;
+        }
+        
+        // STEP 1 : PREP TEMPLATE & LOAD IN ALL ASSETS
+        try {
+            // get the precomps bin
+            var precompsBin   = getItem( liveScene.templateLookup('precomps_bin'), FolderItem );
+            // get master switch comp being modified
+            var logosheetComp = getItem( liveScene.templateLookup('{0}sheet'.format(tag)) );
+            // get the asset bin to be populated
+            var logosheetBin = getItem( liveScene.templateLookup('{0}s0_bin'.format(tag)), FolderItem );
+            // if any pieces are missing, bail out
+            if (logosheetComp === undefined || precompsBin === undefined){
                 liveScene.log.write(ERR, errorMessages['missing_template']);
             }
-            
+            // clean out the asset bin
             for (i=1; i<=logosheetBin.numItems; i++) {
                 logosheetBin.item(1).remove();
             }
+
+            
             // get all team assets ready to import
             var assetFolder = new Folder( liveScene.getFolder("{0}logos2d".format(tag)) );
             var assetList = assetFolder.getFiles(AIFile);
+
+            // import all team assets to requested bin
+            for (t in assetList){
+                if (!assetList.hasOwnProperty(t)) continue;
+                var imOptions  = new ImportOptions();
+                imOptions.file = assetList[t];
+                imOptions.sequence = false;
+                imOptions.importAs = ImportAsType.FOOTAGE;
+                try {
+                    var aiFile = app.project.importFile(imOptions);
+                    aiFile.parentFolder = logosheetBin;
+                } catch(e) {
+                    liveScene.log.write(ERR, errorMessages['failed_build']);
+                }
+        
+            }
         } catch (e) {
             alert(e + '\n' + e.message);
         }
-        
-        // create a master control layer        
+                
+        // STEP 2 : BUILD THE SWITCHING COMPS WITH THE NEW ASSETS     
         var ctrlnull = logosheetComp.layers.addNull();
         var ctrlsel = ctrlnull.property("Effects").addProperty("Layer Control");
-        (tag === 'team') ? tag = 'HOME' : null;
-        ctrlnull.name = "SELECT {0} TEAM - see effects".format(tag.toUpperCase());
-        ctrlsel.name = "Team Picker";
         
-        // import all team assets to HOME bin
-        for (t in assetList){
-            if (!assetList.hasOwnProperty(t)) continue;
-            var imOptions  = new ImportOptions();
-            imOptions.file = assetList[t];
-            imOptions.sequence = false;
-            imOptions.importAs = ImportAsType.FOOTAGE;
-            try {
-                var aiFile = app.project.importFile(imOptions);
-                aiFile.parentFolder = logosheetBin;
-                // dump all assets into switch comp
-                var lyr = logosheetComp.layers.add(aiFile);
-                lyr.collapseTransformation = true;
-                lyr.moveToEnd();
-                lyr.opacity.setValue(0);
-                lyr.shy = true;
-                lyr.opacity.expression = "if (thisComp.layer('{0}').effect('{1}')('Layer').index == thisLayer.index) 100 else 0".format(ctrlnull.name, ctrlsel.name);
-            } catch (e) {
-                alert(e + '\n' + e.message);
-            }
+        ctrlnull.name = "SELECT {0} - see effects".format(tag.toUpperCase());
+        ctrlsel.name = "{0} Picker".format(tag.toUpperCase());
+
+        for (var i=1; i<=logosheetBin.items.length; i++){
+            // dump all assets into switch comp
+            var lyr = logosheetComp.layers.add(logosheetBin.item(i));
+            lyr.collapseTransformation = true;
+            lyr.moveToEnd();
+            lyr.opacity.setValue(0);
+            lyr.shy = true;
+            lyr.opacity.expression = "if (thisComp.layer('{0}').effect('{1}')('Layer').index == thisLayer.index) 100 else 0".format(ctrlnull.name, ctrlsel.name);
         }
+
         logosheetComp.hideShyLayers = true;
-        ctrlsel.property("Layer").setValue(2);        
+        ctrlsel.property("Layer").setValue(2);
+        alert('finished ' + logosheetComp.name);
+        return true;
     }
     /*
      * TODO: COMMENTS
@@ -1291,6 +1321,7 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
                     // If everything is ready, now actually switch the asset using the custom asset folder, 
                     // the id of the new asset, and the extension
                     var customAssetDir = liveScene.getFolder("customasset0{0}".format(i));
+                    alert(customAssetDir + '/' + id + '.' + ext);
                     var newAsset = new File ("{0}/{1}.{2}".format(customAssetDir, id, ext));
                     avitem.replace(newAsset);
                 } catch(e) {
