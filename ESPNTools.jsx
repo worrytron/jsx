@@ -692,7 +692,10 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
     /*
      * TODO: ADD COMMENTS
      */
-    function buildOfflineProjectTemplate( fresh ) {
+    function buildOfflineProjectTemplate() {
+        var templateCheck = getItem( liveScene.templateLookup('dashboard') );
+        if (templateCheck === undefined) 
+            buildProjectTemplate();
         loadOfflineAssets('team');
         loadOfflineAssets('show');
         loadOfflineAssets('away');
@@ -1076,21 +1079,16 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
         
         // 'away' is a special case. we remove all bins and comps that are no longer needed
         if (tag == 'away') {
-            alert('away mode -->');
             // duplicate the 'team' comp and rename it
             var awaysheetBin = getItem( liveScene.templateLookup('teams1_bin'), FolderItem );
             var awaysheetComp = getItem( liveScene.templateLookup('awaysheet') );
-            alert(awaysheetBin.name);
-            alert(awaysheetComp.name);
             awaysheetBin.remove();
             awaysheetComp.remove();
             
             var teamsheetComp = getItem( liveScene.templateLookup('teamsheet') ); 
   
             awaysheetComp = teamsheetComp.duplicate();
-            alert(awaysheetComp.name);
             awaysheetComp.name = liveScene.templateLookup('awaysheet');
-            alert(awaysheetComp.name);
             // exit the operation
             return true;
         }
@@ -1155,13 +1153,8 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
 
         logosheetComp.hideShyLayers = true;
         ctrlsel.property("Layer").setValue(2);
-        alert('finished ' + logosheetComp.name);
         return true;
     }
-    /*
-     * TODO: COMMENTS
-     */    
-    function loadOfflineShowAssets () {}
     /*
      * TODO: COMMENTS
      */    
@@ -1321,7 +1314,6 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
                     // If everything is ready, now actually switch the asset using the custom asset folder, 
                     // the id of the new asset, and the extension
                     var customAssetDir = liveScene.getFolder("customasset0{0}".format(i));
-                    alert(customAssetDir + '/' + id + '.' + ext);
                     var newAsset = new File ("{0}/{1}.{2}".format(customAssetDir, id, ext));
                     avitem.replace(newAsset);
                 } catch(e) {
@@ -1636,8 +1628,9 @@ if (scene != '') (project + '_' + scene + ' v{3}') else (project + ' v{3}');""".
             dlg.grp.tabs.setup.versionText.text = versionStr;
             
             // Setup Tab
-            dlg.grp.tabs.setup.createTemplate.onClick       = buildProjectTemplate;
-            dlg.grp.tabs.setup.createProject.onClick        = function () { buildOfflineProjectTemplate() };//saveWithBackup;
+            dlg.grp.tabs.setup.build.createTemplate.onClick       = buildProjectTemplate;
+            dlg.grp.tabs.setup.build.createOfflineTemplate.onClick= buildOfflineProjectTemplate;
+            dlg.grp.tabs.setup.createProject.onClick        = saveWithBackup;
             dlg.grp.tabs.setup.production.dd.onChange       = function () { changedProduction() };
             dlg.grp.tabs.setup.projectName.edit.e.onChange  = function () { changedProject() };
             dlg.grp.tabs.setup.projectName.pick.dd.onChange = function () { changedProject() };

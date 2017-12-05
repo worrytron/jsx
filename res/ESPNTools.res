@@ -31,8 +31,13 @@ group {
                 e: EditText { alignment:['fill','top'], preferredSize:[-1,20] }
             },
             separator: Panel { alignment:['fill','top'], preferredSize:[-1,0] },
-            createTemplate: Button { text: 'Build Template', alignment:['fill','top'] },
             createProject: Button { text: 'Create / Rename Project', alignment:['fill','top'] },
+            buildLbl: StaticText { text: 'Build Template:', alignment:['left','top'] },
+            build: Group {
+                orientation: 'row', preferredSize:[-1,-1], alignment:['fill','top'], alignChildren:['fill','top'],
+                createTemplate: Button { text: 'Online (CAGE)', alignment:['fill','top'] },
+                createOfflineTemplate: Button { text: 'Offline (Edit)', alignment:['fill','top'] }
+            },
             versionText: StaticText { text: 'v0.0.0', alignment:['right','bottom'] },
             updateUI: Button { text: 'Refresh UI', alignment:['fill','bottom'] }
         },
