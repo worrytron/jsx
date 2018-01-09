@@ -842,6 +842,18 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
         var awayLocationComp = app.project.items.addComp('Away Locations', w,h,par,d,fr);
         var showNameComp = app.project.items.addComp('Show Names', w,h,par,d,fr);
         
+        var scriptBin = getItem( liveScene.templateLookup('script_bin'), FolderItem );
+        
+        teamNameComp.parentFolder = scriptBin;
+        teamNicknameComp.parentFolder = scriptBin;
+        teamTricodeComp.parentFolder = scriptBin;
+        teamLocationComp.parentFolder = scriptBin;
+        awayNameComp.parentFolder = scriptBin;
+        awayNicknameComp.parentFolder = scriptBin;
+        awayTricodeComp.parentFolder = scriptBin;
+        awayLocationComp.parentFolder = scriptBin;
+        showNameComp.parentFolder = scriptBin;
+        
         //for (t in liveScene.prod.teamlist){
         for (var i=0; i<liveScene.prod.teamlist.length; i++){
             var t = liveScene.prod.teamlist[i];
@@ -883,7 +895,7 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
             n.moveToEnd();
             
         }
-        /*
+
         //for (s in liveScene.prod.showlist){
         for (var i=0; i<liveScene.prod.showlist.length; i++){
             //if (!liveScene.prod.showlist.hasOwnProperty(s)) continue;
@@ -892,23 +904,24 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
             var n;
             n = showNameComp.layers.addNull(d);
             n.name = show["NAME"];
-        }*/
+            n.moveToEnd();
+        }
         
         var dashboard = getItem( liveScene.templateLookup('dashboard') );
         try {
             //if (thisComp.layer('{0}').effect('{1}')('Layer').index == thisLayer.index) 100 else 0".format(ctrlnull.name, ctrlsel.name);
     
-            dashboard.layer('SHOW NAME').text.sourceText.expression = "comp('Show Names').layer( comp('Show Logosheet Master Switch').layer(1).effect('SHOW Picker').layer.index ).name";
+            dashboard.layer('SHOW NAME').text.sourceText.expression = "comp('Show Names').layer( comp('Show Logosheet Master Switch').layer(1).effect('SHOW Picker').layer.index-1 ).name";
             
-            dashboard.layer('TEAM NAME').text.sourceText.expression = "comp('Team Names').layer( comp('Team Logosheet Master Switch').layer(1).effect('TEAM Picker').layer.index ).name";
-            dashboard.layer('NICKNAME').text.sourceText.expression = "comp('Team Nicknames').layer( comp('Team Logosheet Master Switch').layer(1).effect('TEAM Picker').layer.index ).name";
-            dashboard.layer('TRICODE').text.sourceText.expression = "comp('Team Tricodes').layer( comp('Team Logosheet Master Switch').layer(1).effect('TEAM Picker').layer.index ).name";
-            dashboard.layer('LOCATION').text.sourceText.expression = "comp('Team Locations').layer( comp('Team Logosheet Master Switch').layer(1).effect('TEAM Picker').layer.index ).name";
+            dashboard.layer('TEAM NAME').text.sourceText.expression = "comp('Team Names').layer( comp('Team Logosheet Master Switch').layer(1).effect('TEAM Picker').layer.index-1 ).name";
+            dashboard.layer('NICKNAME').text.sourceText.expression = "comp('Team Nicknames').layer( comp('Team Logosheet Master Switch').layer(1).effect('TEAM Picker').layer.index-1 ).name";
+            dashboard.layer('TRICODE').text.sourceText.expression = "comp('Team Tricodes').layer( comp('Team Logosheet Master Switch').layer(1).effect('TEAM Picker').layer.index-1 ).name";
+            dashboard.layer('LOCATION').text.sourceText.expression = "comp('Team Locations').layer( comp('Team Logosheet Master Switch').layer(1).effect('TEAM Picker').layer.index-1 ).name";
 
-            dashboard.layer('AWAY TEAM NAME').text.sourceText.expression = "comp('Team Names').layer( comp('Away Logosheet Master Switch').layer(1).effect('TEAM Picker').layer.index ).name";
-            dashboard.layer('AWAY NICKNAME').text.sourceText.expression = "comp('Team Nicknames').layer( comp('Away Logosheet Master Switch').layer(1).effect('TEAM Picker').layer.index ).name";
-            dashboard.layer('AWAY TRICODE').text.sourceText.expression = "comp('Team Tricodes').layer( comp('Away Logosheet Master Switch').layer(1).effect('TEAM Picker').layer.index ).name";
-            dashboard.layer('AWAY LOCATION').text.sourceText.expression = "comp('Team Locations').layer( comp('Away Logosheet Master Switch').layer(1).effect('TEAM Picker').layer.index ).name";
+            dashboard.layer('AWAY TEAM NAME').text.sourceText.expression = "comp('Team Names').layer( comp('Away Logosheet Master Switch').layer(1).effect('TEAM Picker').layer.index-1 ).name";
+            dashboard.layer('AWAY NICKNAME').text.sourceText.expression = "comp('Team Nicknames').layer( comp('Away Logosheet Master Switch').layer(1).effect('TEAM Picker').layer.index-1 ).name";
+            dashboard.layer('AWAY TRICODE').text.sourceText.expression = "comp('Team Tricodes').layer( comp('Away Logosheet Master Switch').layer(1).effect('TEAM Picker').layer.index-1 ).name";
+            dashboard.layer('AWAY LOCATION').text.sourceText.expression = "comp('Team Locations').layer( comp('Away Logosheet Master Switch').layer(1).effect('TEAM Picker').layer.index-1 ).name";
 
         } catch(e) {
             liveScene.log.write(ERR, errorMessages['missing_template'], e);            
@@ -962,6 +975,41 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
         nmLayer.text.sourceText.expression = "comp('{0}').layer('{1}').text.sourceText;".format("0. Dashboard", "PROJECT NAME");
     }
     /*
+     * Builds the comps for a logosheet based on the JSON data stored in the production's ae.json.
+     * 'tag' is an optional flag that will prepend a string to the precomp names (e.g. for HOME and AWAY)
+     */
+    function buildComps(layout, sheet, bin, tag, skipExisting) {
+        (skipExisting === undefined) ? skipExisting = true : skipExisting = false;
+        // c is a comp defined in the logosheet JSON data
+        for (c in layout){
+            if (!layout.hasOwnProperty(c)) continue;
+            // Add "HOME" or "AWAY" to the comp name
+            var name = c;
+            if (tag !== undefined) name = "{0}{1}".format(tag, name);
+            // Skip the comp if it already exists
+            var comp = getItem(name);
+            // the "force" flag is applied during offline conversions.
+            // ordinarily (when force is false) existing comps are simply skipped over
+            if (comp !== undefined && skipExisting === true){
+                continue;
+            }
+            // Build the comp from JSON data
+            try {
+                // when skipExisting is false, it is *assumed* that the precomps exist, are empty, and need the layers re-added.
+                if (comp == undefined)
+                    comp = app.project.items.addComp(name, layout[c]["Size"][0], layout[c]["Size"][1], 1.0, 60, 59.94);   
+                comp.parentFolder = bin;
+                layer = comp.layers.add(sheet);
+                layer.position.setValue(layout[c]["Pos"]);
+                layer.anchorPoint.setValue(layout[c]["Anx"]);
+                layer.scale.setValue(layout[c]["Scl"]);
+                layer.collapseTransformation = true;                    
+            } catch(e) {
+                liveScene.log.write(WARN, errorMessages['missing_template'], e);
+            }
+        }
+    }
+    /*
      * Builds the logo slick precomps set up in the production's platform database (ae.json)
      */
     function buildToolkittedPrecomps () {
@@ -978,34 +1026,6 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
         var teamLayout = liveScene.prod.getPlatformData()['Team Logosheet'];
         var showLayout = liveScene.prod.getPlatformData()['Show Logosheet'];
         
-        // Builds the comps for a logosheet based on the JSON data stored in the production's ae.json.
-        // 'tag' is an optional flag that will prepend a string to the precomp names (e.g. for HOME and AWAY)
-        function buildComps(layout, sheet, bin, tag) {
-            // c is a comp defined in the logosheet JSON data
-            for (c in layout){
-                if (!layout.hasOwnProperty(c)) continue;
-                // Add "HOME" or "AWAY" to the comp name
-                var name = c;
-                if (tag !== undefined) name = "{0}{1}".format(tag, name);
-                // Skip the comp if it already exists
-                var comp = getItem(name);
-                if (comp !== undefined){
-                    continue;
-                }
-                // Build the comp from JSON data
-                try {
-                    comp = app.project.items.addComp(name, layout[c]["Size"][0], layout[c]["Size"][1], 1.0, 60, 59.94);
-                    comp.parentFolder = bin;
-                    layer = comp.layers.add(sheet);
-                    layer.position.setValue(layout[c]["Pos"]);
-                    layer.anchorPoint.setValue(layout[c]["Anx"]);
-                    layer.scale.setValue(layout[c]["Scl"]);
-                    layer.collapseTransformation = true;                    
-                } catch(e) {
-                    liveScene.log.write(WARN, errorMessages['missing_template'], e);
-                }
-            }
-        }
         // Build the home and away team precomps
         try {
             buildComps( teamLayout, homeLogosheetComp, precompsBin, 'HOME ' );
@@ -1182,40 +1202,28 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
         // For away teams, remove all bins and comps that are no longer needed
         if (tag == 'away') {
             // duplicate the 'team' comp and rename it
-            var awaysheetBin = getItem( liveScene.templateLookup('team1_bin'), FolderItem );
-            var awaysheetComp = getItem( liveScene.templateLookup('awaysheet') );
-            awaysheetBin.remove();
-            awaysheetComp.remove();
-            
-            var teamsheetComp = getItem( liveScene.templateLookup('teamsheet') ); 
-  
-            awaysheetComp = teamsheetComp.duplicate();
-            awaysheetComp.name = liveScene.templateLookup('awaysheet');
+            try {
+                var awaysheetBin = getItem( liveScene.templateLookup('team1_bin'), FolderItem );
+                var awaysheetComp = getItem( liveScene.templateLookup('awaysheet') );
+
+                awaysheetBin.remove();
+                awaysheetComp.remove();
+
+                var templateData = liveScene.prod.getPlatformData()['Team Logosheet'];
+                var teamsheetComp = getItem( liveScene.templateLookup('teamsheet') );
+                var precompsBin = getItem( liveScene.templateLookup('precomps_bin'), FolderItem );
+                
+                awaysheetComp = teamsheetComp.duplicate();
+                awaysheetComp.name = liveScene.templateLookup('awaysheet');
+
+                buildComps(templateData, awaysheetComp, precompsBin, 'AWAY ', false);
+                
+            } catch(e) {
+                liveScene.log.write(ERR, errorMessages['missing_template'], e);
+            }
             // exit the operation
             return true;
         }
-        /*
-        // Custom assets need a comp created to contain them. This could get really heavy, depending.
-        if (tag.indexOf('asset') > -1) {
-            var customAssetName = liveScene.templateLookup('{0}_bin'.format(tag));
-            if (customAssetCheck.indexOf('Custom Asset') > -1) {
-                return false;
-            }
-            var customAssetBin = getItem( customAssetName, FolderItem );
-            /// Create a comp for custom assets
-            // get the first item in the bin
-            try { var first = customAssetBin.item(1) }
-            catch (e) return false;
-            // get its properties
-            var w = first.width;
-            var h = first.height;
-            var d = first.duration;
-            var frate = first.frameRate;
-            var par = first.pixelAspect;            
-            // create a comp based on those properties (boy it would suck if custom assets weren't templated)
-            var customAssetComp = app.project.items.addComp(customAssetName, w, h, par, d, frate);
-        }
-        */
         
         // STEP 1 : PREP TEMPLATE & LOAD IN ALL ASSETS
         try {
