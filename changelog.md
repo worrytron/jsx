@@ -21,15 +21,23 @@
 - Changed all internal path mapping to relative
 - Option to convert scripted AE template to standalone version (e.g. for edit toolkits)
 
-1.0.4 - before xmas
+1.0.3b - 1/9/2018
+===================================================================================================
+- Modified offline version to include dashboard text layer switching
+
+1.0.4 - 
 ===================================================================================================
 * Thoroughly test & extend C4D support for 3D assets
 * More render output templates (720p, 1080p, separate matte&fill, etc)
 * Remove requirement for render output templates to be built by user
 * User-selected render folder option
 
-1.1.0 - early 2018
+1.1.0 - 
 ===================================================================================================
 * Batching from spreadsheet
 * Text layout templates incorporated into ESPNTools UI
 * Conform update tools incorproated into ESPNTools UI
+
+2.0 -
+===================================================================================================
+* Conversion to CEP framework

@@ -131,7 +131,7 @@ function ProductionData ( id ) {
                 teamList.push(t);
             }
             this.teams = teamDb;
-            this.teamlist = teamList;
+            this.teamlist = teamList.sort();
             this.teamdata = true;
         }
     };
@@ -147,7 +147,7 @@ function ProductionData ( id ) {
             showList.push(s);
         }
         this.shows = showDb;
-        this.showlist = showList;
+        this.showlist = showList.sort();
         this.showdata = true;
     }
     /*
@@ -162,7 +162,7 @@ function ProductionData ( id ) {
             sponsorList.push(s);
         }
         this.sponsors = sponsorDb;
-        this.sponsorlist = sponsorList;
+        this.sponsorlist = sponsorList.sort();
         this.sponsordata = true;
     }
     /*

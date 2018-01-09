@@ -699,6 +699,15 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
         loadOfflineAssets('team');
         loadOfflineAssets('show');
         loadOfflineAssets('away');
+        /*
+        loadOfflineAssets('asset1');
+        loadOfflineAssets('asset2');
+        loadOfflineAssets('asset3');
+        loadOfflineAssets('asset4');
+        loadOfflineAssets('asset5');
+        */
+        
+        buildOfflineDashboard();
     }
     /*
      * This builds and sets up the dashboard comp for the project. This is mostly text layers
@@ -810,6 +819,99 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
             }
         } catch (e) {
             liveScene.log.write(ERR, errorMessages['failed_build'], e);
+        }        
+    }
+    /*
+     * This modifies the dashboard to work as an offline version, which requires the building
+     * of additional support comps.
+     */
+    function buildOfflineDashboard () {
+        var w = 100;
+        var h = 100;
+        var d = 1;
+        var par = 1.0;
+        var fr = 59.94;
+        
+        var teamNameComp = app.project.items.addComp('Team Names', w,h,par,d,fr);
+        var teamNicknameComp = app.project.items.addComp('Team Nicknames', w,h,par,d,fr);
+        var teamTricodeComp = app.project.items.addComp('Team Tricodes', w,h,par,d,fr);
+        var teamLocationComp = app.project.items.addComp('Team Locations', w,h,par,d,fr);
+        var awayNameComp = app.project.items.addComp('Away Names', w,h,par,d,fr);
+        var awayNicknameComp = app.project.items.addComp('Away Nicknames', w,h,par,d,fr);
+        var awayTricodeComp = app.project.items.addComp('Away Tricodes', w,h,par,d,fr);
+        var awayLocationComp = app.project.items.addComp('Away Locations', w,h,par,d,fr);
+        var showNameComp = app.project.items.addComp('Show Names', w,h,par,d,fr);
+        
+        //for (t in liveScene.prod.teamlist){
+        for (var i=0; i<liveScene.prod.teamlist.length; i++){
+            var t = liveScene.prod.teamlist[i];
+            if (t === "NULL" || t === "ESPN_META") continue;
+            
+            var team = liveScene.prod.teams[t];
+          
+            var n;
+            n = teamNameComp.layers.addNull(d);
+            n.name = team["DISPLAY NAME"];
+            n.moveToEnd();
+        
+            n = teamNicknameComp.layers.addNull(d);
+            n.name = team["NICKNAME"];
+            n.moveToEnd();
+
+            n = teamTricodeComp.layers.addNull(d);
+            n.name = team["TRI"];
+            n.moveToEnd();
+            
+            n = teamLocationComp.layers.addNull(d);
+            n.name = team["LOCATION"];
+            n.moveToEnd();            
+            
+            n = awayNameComp.layers.addNull(d);
+            n.name = team["DISPLAY NAME"];
+            n.moveToEnd();
+            
+            n = awayNicknameComp.layers.addNull(d);
+            n.name = team["NICKNAME"];
+            n.moveToEnd();
+            
+            n = awayTricodeComp.layers.addNull(d);
+            n.name = team["TRI"];
+            n.moveToEnd();
+            
+            n = awayLocationComp.layers.addNull(d);
+            n.name = team["LOCATION"];
+            n.moveToEnd();
+            
+        }
+        /*
+        //for (s in liveScene.prod.showlist){
+        for (var i=0; i<liveScene.prod.showlist.length; i++){
+            //if (!liveScene.prod.showlist.hasOwnProperty(s)) continue;
+            var s = liveScene.prod.showlist[i];
+            var show = liveScene.prod.shows[s];
+            var n;
+            n = showNameComp.layers.addNull(d);
+            n.name = show["NAME"];
+        }*/
+        
+        var dashboard = getItem( liveScene.templateLookup('dashboard') );
+        try {
+            //if (thisComp.layer('{0}').effect('{1}')('Layer').index == thisLayer.index) 100 else 0".format(ctrlnull.name, ctrlsel.name);
+    
+            dashboard.layer('SHOW NAME').text.sourceText.expression = "comp('Show Names').layer( comp('Show Logosheet Master Switch').layer(1).effect('SHOW Picker').layer.index ).name";
+            
+            dashboard.layer('TEAM NAME').text.sourceText.expression = "comp('Team Names').layer( comp('Team Logosheet Master Switch').layer(1).effect('TEAM Picker').layer.index ).name";
+            dashboard.layer('NICKNAME').text.sourceText.expression = "comp('Team Nicknames').layer( comp('Team Logosheet Master Switch').layer(1).effect('TEAM Picker').layer.index ).name";
+            dashboard.layer('TRICODE').text.sourceText.expression = "comp('Team Tricodes').layer( comp('Team Logosheet Master Switch').layer(1).effect('TEAM Picker').layer.index ).name";
+            dashboard.layer('LOCATION').text.sourceText.expression = "comp('Team Locations').layer( comp('Team Logosheet Master Switch').layer(1).effect('TEAM Picker').layer.index ).name";
+
+            dashboard.layer('AWAY TEAM NAME').text.sourceText.expression = "comp('Team Names').layer( comp('Away Logosheet Master Switch').layer(1).effect('TEAM Picker').layer.index ).name";
+            dashboard.layer('AWAY NICKNAME').text.sourceText.expression = "comp('Team Nicknames').layer( comp('Away Logosheet Master Switch').layer(1).effect('TEAM Picker').layer.index ).name";
+            dashboard.layer('AWAY TRICODE').text.sourceText.expression = "comp('Team Tricodes').layer( comp('Away Logosheet Master Switch').layer(1).effect('TEAM Picker').layer.index ).name";
+            dashboard.layer('AWAY LOCATION').text.sourceText.expression = "comp('Team Locations').layer( comp('Away Logosheet Master Switch').layer(1).effect('TEAM Picker').layer.index ).name";
+
+        } catch(e) {
+            liveScene.log.write(ERR, errorMessages['missing_template'], e);            
         }        
     }
     /*
@@ -933,8 +1035,8 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
         // Get project template objects needed for loading
         var homeLogosheetComp = getItem( liveScene.templateLookup('teamsheet') );
         var awayLogosheetComp = getItem( liveScene.templateLookup('awaysheet') );
-        var homeLogosheetBin = getItem( liveScene.templateLookup('teams0_bin'), FolderItem );
-        var awayLogosheetBin = getItem( liveScene.templateLookup('teams1_bin'), FolderItem );
+        var homeLogosheetBin = getItem( liveScene.templateLookup('team0_bin'), FolderItem );
+        var awayLogosheetBin = getItem( liveScene.templateLookup('team1_bin'), FolderItem );
         // If they don't exist, alert the user and bail out
         if (!homeLogosheetComp || 
             !awayLogosheetComp ||
@@ -1002,7 +1104,7 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
         if (liveScene.prod.name === "NULL") return false;
         // Get project template objects needed for loading
         var showLogosheetComp = getItem( liveScene.templateLookup('showsheet') );
-        var showLogosheetBin = getItem( liveScene.templateLookup('shows0_bin'), FolderItem );
+        var showLogosheetBin = getItem( liveScene.templateLookup('show0_bin'), FolderItem );
         
         if (!showLogosheetComp ||
             !showLogosheetBin) {
@@ -1076,11 +1178,11 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
             if (fileObj.name.indexOf('.ai') > -1)
                 return true;
         }
-        
-        // 'away' is a special case. we remove all bins and comps that are no longer needed
+        // SPECIAL CASES
+        // For away teams, remove all bins and comps that are no longer needed
         if (tag == 'away') {
             // duplicate the 'team' comp and rename it
-            var awaysheetBin = getItem( liveScene.templateLookup('teams1_bin'), FolderItem );
+            var awaysheetBin = getItem( liveScene.templateLookup('team1_bin'), FolderItem );
             var awaysheetComp = getItem( liveScene.templateLookup('awaysheet') );
             awaysheetBin.remove();
             awaysheetComp.remove();
@@ -1092,6 +1194,28 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
             // exit the operation
             return true;
         }
+        /*
+        // Custom assets need a comp created to contain them. This could get really heavy, depending.
+        if (tag.indexOf('asset') > -1) {
+            var customAssetName = liveScene.templateLookup('{0}_bin'.format(tag));
+            if (customAssetCheck.indexOf('Custom Asset') > -1) {
+                return false;
+            }
+            var customAssetBin = getItem( customAssetName, FolderItem );
+            /// Create a comp for custom assets
+            // get the first item in the bin
+            try { var first = customAssetBin.item(1) }
+            catch (e) return false;
+            // get its properties
+            var w = first.width;
+            var h = first.height;
+            var d = first.duration;
+            var frate = first.frameRate;
+            var par = first.pixelAspect;            
+            // create a comp based on those properties (boy it would suck if custom assets weren't templated)
+            var customAssetComp = app.project.items.addComp(customAssetName, w, h, par, d, frate);
+        }
+        */
         
         // STEP 1 : PREP TEMPLATE & LOAD IN ALL ASSETS
         try {
@@ -1100,7 +1224,7 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
             // get master switch comp being modified
             var logosheetComp = getItem( liveScene.templateLookup('{0}sheet'.format(tag)) );
             // get the asset bin to be populated
-            var logosheetBin = getItem( liveScene.templateLookup('{0}s0_bin'.format(tag)), FolderItem );
+            var logosheetBin = getItem( liveScene.templateLookup('{0}0_bin'.format(tag)), FolderItem );
             // if any pieces are missing, bail out
             if (logosheetComp === undefined || precompsBin === undefined){
                 liveScene.log.write(ERR, errorMessages['missing_template']);
@@ -1153,6 +1277,7 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
 
         logosheetComp.hideShyLayers = true;
         ctrlsel.property("Layer").setValue(2);
+            
         return true;
     }
     /*
@@ -1186,7 +1311,7 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
         var msg = "Parts of your project template seem to be missing. Run Build Template to repair it.";
         // Gather up and validate all the required AE objects
         // lookup the team logo slick project bin
-        var logoBin = getItem( liveScene.templateLookup('teams{0}_bin'.format(idx)), FolderItem );
+        var logoBin = getItem( liveScene.templateLookup('team{0}_bin'.format(idx)), FolderItem );
         // dashboard
         var dashComp = getItem( liveScene.templateLookup('dashboard') );
         // lookup the production's team logo slick folder 
@@ -1231,7 +1356,7 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
     function switchShow () {
         var msg = "Parts of your project template seem to be missing. Run Build Template to repair it.";
         
-        var logoBin = getItem( liveScene.templateLookup('shows0_bin'), FolderItem );
+        var logoBin = getItem( liveScene.templateLookup('show0_bin'), FolderItem );
         var dashComp = getItem( liveScene.templateLookup('dashboard') );
         var showLogoFolder = new File( liveScene.getFolder( 'showlogos2d') );
         var newLogoSheet = new File( '{0}/{1}.ai'.format(showLogoFolder.fullName, liveScene.show.id ) );
