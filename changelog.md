@@ -27,7 +27,7 @@
 
 1.0.4 - 
 ===================================================================================================
-* Thoroughly test & extend C4D support for 3D assets
+* Optimize JSON search functions
 * More render output templates (720p, 1080p, separate matte&fill, etc)
 * Remove requirement for render output templates to be built by user
 * User-selected render folder option

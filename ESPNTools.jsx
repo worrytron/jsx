@@ -660,7 +660,7 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
             // make a copy of the file as a backup
             try {
                 aepFile.copy( liveScene.getFullPath()['backup'] );
-            } catch (e) { 
+             } catch (e) { 
                 liveScene.log.write(ERR, errorMessages['failed_backup'], e);
             }/**/
             return true;
@@ -1135,6 +1135,7 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
         try{
             var showFolder = new Folder( liveScene.getFolder("showlogos2d") );
             var firstFile = showFolder.getFiles(AIFile)[0];
+            if (firstFile === undefined) return false;
             
             var imOptions = new ImportOptions();
             imOptions.file = firstFile;
@@ -1208,14 +1209,13 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
 
                 awaysheetBin.remove();
                 awaysheetComp.remove();
-
+                
                 var templateData = liveScene.prod.getPlatformData()['Team Logosheet'];
                 var teamsheetComp = getItem( liveScene.templateLookup('teamsheet') );
                 var precompsBin = getItem( liveScene.templateLookup('precomps_bin'), FolderItem );
                 
                 awaysheetComp = teamsheetComp.duplicate();
                 awaysheetComp.name = liveScene.templateLookup('awaysheet');
-
                 buildComps(templateData, awaysheetComp, precompsBin, 'AWAY ', false);
                 
             } catch(e) {
@@ -1246,6 +1246,7 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
             // get all team assets ready to import
             var assetFolder = new Folder( liveScene.getFolder("{0}logos2d".format(tag)) );
             var assetList = assetFolder.getFiles(AIFile);
+            if (assetList.length === 0) return;
 
             // import all team assets to requested bin
             for (t in assetList){
