@@ -20,36 +20,36 @@ function SceneLink (sceneData) {
     };
 
     this.Link = function () {
-        this.linked = -1;
         this.dashboard = getItem(sceneData.templateLookup('dashboard'));
-        
         if (isValid(dashboard)) {
-            this.linked = 1;
             this.bottomline    = getItem(sceneData.templateLookup('bottomline'));
-            if (!isValid(this.bottomline)) this.linked = 0;
             this.homeLogosheet = getItem(sceneData.templateLookup('teamsheet'));
-            if (!isValid(this.homeLogosheet)) this.linked = 0;
             this.awayLogosheet = getItem(sceneData.templateLookup('awaysheet'));
-            if (!isValid(this.awayLogosheet)) this.linked = 0;
             this.showLogosheet = getItem(sceneData.templateLookup('showsheet'));
-            if (!isValid(this.showLogosheet)) this.linked = 0;
             // template bins       
             this.bottomlineBin = getItem(sceneData.templateLookup('guides_bin'), FolderItem);
-            if (!isValid(this.bottomlineBin)) this.linked = 0;
             this.precompsBin   = getItem(sceneData.templateLookup('precomps_bin'), FolderItem);
-            if (!isValid(this.precompsBin)) this.linked = 0;
             this.renderCompBin = getItem(sceneData.templateLookup('render_bin'), FolderItem);
-            if (!isValid(this.renderCompBin)) this.linked = 0;
-
-        } else {
-            return false;
         }
-
-        if (this.link === 0) {
-            this.sceneData.log.write(WARN, errorMessages['missing_template']);
-        }
-        return true;
+        return this.TestLink();
     };
+
+    this.TestLink = function () {
+        var linked = -1;
+
+        if (!isValid(this.dashboard))     return linked;
+        if (!isValid(this.bottomline))    this.linked = 0;
+        if (!isValid(this.homeLogosheet)) this.linked = 0;
+        if (!isValid(this.awayLogosheet)) this.linked = 0;
+        if (!isValid(this.showLogosheet)) this.linked = 0;
+        if (!isValid(this.bottomlineBin)) this.linked = 0;
+        if (!isValid(this.precompsBin))   this.linked = 0;
+        if (!isValid(this.renderCompBin)) this.linked = 0;
+
+        if (linked === -1) {
+            linked = 1;
+        } return linked;
+    }
 
     /*********************************************************************************************
     TEMPLATE BUILDERS
@@ -216,8 +216,8 @@ function SceneLink (sceneData) {
         // NULL productions cannot be built or repaired
         if (this.sceneData.prod.name === "NULL") return false;
         
-        var logosheetComp = getItem( liveScene.templateLookup('{0}sheet'.format(type)) );
-        var logosheetBin = getItem( liveScene.templateLookup('{0}{1}_bin'.format(type_, t)));
+        var logosheetComp = getItem( this.sceneData.templateLookup('{0}sheet'.format(type)) );
+        var logosheetBin = getItem( this.sceneData.templateLookup('{0}{1}_bin'.format(type_, t)));
 
         var asset; // avitem that represents the asset
         var lyr; // the layer of the asset
@@ -238,7 +238,7 @@ function SceneLink (sceneData) {
 
             // import the logosheet if none exists
             if (logosheetBin.numItems === 0) {
-                var assetFolder = new Folder( liveScene.getFolder("{0}logos2d".format(type_)) );
+                var assetFolder = new Folder( this.sceneData.getFolder("{0}logos2d".format(type_)) );
                 var firstFile = assetFolder.getFiles(AIFile)[0];
                 asset = importFile(firstFile, assetFolder);
             } else {
@@ -272,7 +272,7 @@ function SceneLink (sceneData) {
                 // if it exists and is empty
                 if (customAssetBin.numItems === 0) {
                     // lookup the asset folder on the server for that custom asset
-                    var customAssetFolder = new Folder( liveScene.getFolder("customasset0{0}".format(i)) );
+                    var customAssetFolder = new Folder( this.sceneData.getFolder("customasset0{0}".format(i)) );
                     // load a random(-ish) file from that asset folder and put it in the bin
                     var firstFile = customAssetFolder.getFiles()[0];
                     importFile(firstFile, customAssetBin);
@@ -335,208 +335,209 @@ function SceneLink (sceneData) {
         }
     }
 
+    /*********************************************************************************************
+     * SWITCH FUNCTIONS
+     * These functions directly alter the linked After Effects project.
+     ********************************************************************************************/
+    /* TODO: COMMENTS
+     */
+    this.SwitchLogosheet = function (type) {
+        var err = -1;
+
+        var t = 0
+        var type_ = type;
+        if (type === 'away'){
+            t = 1;
+            type_ = 'team';
+        }
+
+        var bin = '{0}{1}_bin'.format(type_, t);
+        bin = getItem( this.sceneData.templateLookup(bin), FolderItem );
+        if (!bin.numItems === 0)
+            err = 1;
+
+        var assetFolder = '{0}logos2d'.format(type_);
+        assetFolder = new File( this.sceneData.getFolder( assetFolder ));
+        if (!assetFolder.exists)
+            err = 1;
+
+        var logoSheet = '{0}/{1}.ai'.format(assetFolder.fullName, this.sceneData[type_]['name']);
+        logoSheet = new File(logoSheet);
+        if (!logoSheet.exists)
+            err = 1;
+
+        if (err === 1) {
+            this.sceneData.log.write(ERR, errorMessages['missing_template']);
+            return false;
+        }
+
+        var oldLogoSheet = bin.item(1);
+        oldLogoSheet.replace(logoSheet);
+    }
+    /* TODO: COMMENTS
+     */
+    this.SwitchDashboardTextLayers = function (type) {
+        var t = 0;
+        var type_ = type;
+        var tag = '';
+
+        if (type === 'away'){
+            t = 1;
+            type_ = 'team';
+            tag = 'AWAY';
+        } 
+
+        // team text layers
+        if (type == "team" || type == "away") {     
+            var layerNames = [ 
+                "{0}TEAM NAME",
+                "{0}NICKNAME",
+                "{0}LOCATION",
+                "{0}TRICODE"
+            ];
+            var layerData = [
+                "dispName",
+                "nickname",
+                "location",
+                "tricode"
+            ];
+            for (l in layers) {
+                try {
+                    var lyr = this.dashboard.layer(layers[l].format(tag));
+                    var data = this.sceneData.teams[t][layerData[l]].toUpperCase();
+                    lyr.property('Text').property('Source Text').setValue(data);
+                } catch (e) {
+                    this.sceneData.log.write(WARN, errorMessages['missing_textlayers'], e);
+                }
+            }
+        // everything besides team text layers
+        } else {
+            try {
+                var lyr = this.dashboard.layer('{0} NAME'.format(type));
+                var data = this.sceneData[type].name.toUpperCase();
+                lyr.property('Text').property('Source Text').setValue(data);
+            } catch (e) {
+                this.sceneData.log.write(WARN, errorMessages['missing_textlayers'], e);
+            }
+        }
+    }
+    /*
+     * TODO: ADD COMMENTS
+     */
+    this.SwitchCustomText = function () {
+        var cust = ['A','B','C','D'];
+        try {
+            for (s in cust){
+                if (!cust.hasOwnProperty(s)) continue;
+                this.dashboard.layer('CUSTOM TEXT {0}'.format(cust[s])).property("Text").property("Source Text").setValue(this.sceneData["custom{0}".format(cust[s])]);
+            }            
+        } catch(e) {
+            this.sceneData.log.write(ERR, errorMessages['missing_textlayers'], e);
+        }
+    }
+    /*
+     * Sets the this.sceneData metadata on the pipelined scene's dashboard tag
+     * TODO: THIS NEEDS A TOTAL OVERHAUL
+     */
+    this.SwitchDashboardTag = function () {
+        try {
+            this.dashboard.comment = this.sceneData.getTag().toString();
+            setDashboardLayer('PROJECT_NAME', this.sceneData.project.toString());
+            setDashboardLayer('SCENE_NAME', this.sceneData.name.toString());
+            setDashboardLayer('VERSION', 'v' + zeroFill(this.sceneData.version.toString(), 3));
+        } catch (e) {
+            tempScene.log.write(ERR, errorMessages['failed_tagging'], e);
+            return false;
+        }
+        return true;
+    }
+    /*
+     * This function scans the custom assets bins and looks for the first word in the name
+     * of the bin. If that name matches "which", it switches that asset with the type specified
+     * in the conditional tree of the function. Currently only "team" and "away" are supported.
+     * @param {string} which - "team" or "away"
+     */
+    this.SwitchCustomAssets = function (which) {
+        for (var i=1; i<=NUM_CUSTOM_ASSETS; i++){
+            // lookup the name of each custom asset bin
+            var assetTag = this.sceneData.templateLookup('asset{0}_bin'.format(i));
+            // if [which] is the first word in the folder name
+            if (assetTag.toLowerCase().indexOf(which) === 0){
+                try {
+                    // get the bin itself now
+                    var customAssetBin = getItem( assetTag, FolderItem ); 
+                    if (!customAssetBin || customAssetBin.numItems > 1 || customAssetBin.numItems == 0) {
+                        continue;
+                    } else {
+                        // since the file extension is not known (could be .mov or .png or whatever)
+                        // the extension has to be stored as a variable
+                        var avitem = customAssetBin.item(1);
+                        var ext = avitem.name.split('.')
+                        ext = ext[ext.length-1];
+                    }
+                    // ADD NEW TYPES HERE (currently only TEAM and AWAY)
+                    var id = "";
+                    // "id" is the file name prefix of the new asset to load. This will vary 
+                    // based on "which" and must be programmed for new categories.
+                    if (which === "team") {
+                        id = this.sceneData.teams[0].id;     
+                    } else if (which === "away") {
+                        id = this.sceneData.teams[1].id;
+                    }
+                } catch(e) {
+                    this.sceneData.log.write(WARN, errorMessages['missing_template']);
+                }
+                try {
+                    // If everything is ready, now actually switch the asset using the custom asset folder, 
+                    // the id of the new asset, and the extension
+                    var customAssetDir = this.sceneData.getFolder("customasset0{0}".format(i));
+                    var newAsset = new File ("{0}/{1}.{2}".format(customAssetDir, id, ext));
+                    avitem.replace(newAsset);
+                } catch(e) {
+                    this.sceneData.log.write(WARN, 'Couldn\'t load custom asset {0} for {1}.'.format(i, id));
+                }
+            }
+        }
+    }
+    /*
+     * This function will eval the contents of the custom user scripts fields in the UI.
+     * @param {string} which - The field to eval() ('team', 'away', etc)
+     */
+    this.EvalUserScripts = function (which) {
+        if (!which) return false;
+        // get the script holder comp for which
+        var comp = this.sceneData.templateLookup('{0}Script'.format(which));
+        comp = getItem(comp);
+        if (!comp) {
+            // No big deal if it's missing, just log a warning
+            this.sceneData.log.write(WARN, errorMessages['missing_template']);
+            return null;
+        } else {
+            try {
+                // Eval the comment on the script holder comp
+                eval(comp.comment);
+            } catch(e) {
+                // Error if the eval fails
+                this.sceneData.log.write(ERR, errorMessages['failed_eval'], e);
+            }
+        }
+    }
+
     this.Init(sceneData);
     return this;
 }
-/*********************************************************************************************
- * SWITCH FUNCTIONS
- * These functions directly alter the loaded After Effects project, sourcing information from
- * the liveScene object *only*.
- ********************************************************************************************/
-/* TODO: COMMENTS
- */
-function switchLogosheet (type) {
-    var err = -1;
 
-    var t = 0
-    var type_ = type;
-    if (type === 'away'){
-        t = 1;
-        type_ = 'team';
-    }
-
-    var bin = '{0}{1}_bin'.format(type_, t);
-    bin = getItem( liveScene.templateLookup(bin), FolderItem );
-    if (!bin.numItems === 0)
-        err = 1;
-
-    var assetFolder = '{0}logos2d'.format(type_);
-    assetFolder = new File( liveScene.getFolder( assetFolder ));
-    if (!assetFolder.exists)
-        err = 1;
-
-    var logoSheet = '{0}/{1}.ai'.format(assetFolder.fullName, liveScene[type_]['name']);
-    logoSheet = new File(logoSheet);
-    if (!logoSheet.exists)
-        err = 1;
-
-    if (err === 1) {
-        liveScene.log.write(ERR, errorMessages['missing_template']);
-        return false;
-    }
-
-    var oldLogoSheet = bin.item(1);
-    oldLogoSheet.replace(logoSheet);
-}
-/* TODO: COMMENTS
- */
-function switchDashboardTextLayers (type) {
-    var t = 0;
-    var type_ = type;
-    var tag = '';
-
-    if (type === 'away'){
-        t = 1;
-        type_ = 'team';
-        tag = 'AWAY';
-    } 
-
-    // team text layers
-    if (type == "team" || type == "away") {     
-        var layerNames = [ 
-            "{0}TEAM NAME",
-            "{0}NICKNAME",
-            "{0}LOCATION",
-            "{0}TRICODE"
-        ];
-        var layerData = [
-            "dispName",
-            "nickname",
-            "location",
-            "tricode"
-        ];
-        for (l in layers) {
-            try {
-                var lyr = dashboard.layer(layers[l].format(tag));
-                var data = liveScene.teams[t][layerData[l]].toUpperCase();
-                lyr.property('Text').property('Source Text').setValue(data);
-            } catch (e) {
-                liveScene.log.write(WARN, errorMessages['missing_textlayers'], e);
-            }
-        }
-    // everything besides team text layers
-    } else {
-        try {
-            var lyr = dashboard.layer('{0} NAME'.format(type));
-            var data = liveScene[type].name.toUpperCase();
-            lyr.property('Text').property('Source Text').setValue(data);
-        } catch (e) {
-            liveScene.log.write(WARN, errorMessages['missing_textlayers'], e);
-        }
-    }
-}
-/*
- * Sets the liveScene metadata on the pipelined scene's dashboard tag
- * TODO: RENAME THIS
- */
-function switchDashboardTag () {
-    try {
-        dashboard.comment = liveScene.getTag().toString();
-        setDashboardLayer('PROJECT_NAME', liveScene.project.toString());
-        setDashboardLayer('SCENE_NAME', liveScene.name.toString());
-        setDashboardLayer('VERSION', 'v' + zeroFill(liveScene.version.toString(), 3));
-    } catch (e) {
-        tempScene.log.write(ERR, errorMessages['failed_tagging'], e);
-        return false;
-    }
-    return true;
-}
-/*
- * TODO: ADD COMMENTS
- */
-function switchCustomText () {
-    var cust = ['A','B','C','D'];
-    try {
-        for (s in cust){
-            if (!cust.hasOwnProperty(s)) continue;
-            dashComp.layer('CUSTOM TEXT {0}'.format(cust[s])).property("Text").property("Source Text").setValue(liveScene["custom{0}".format(cust[s])]);
-        }            
-    } catch(e) {
-        liveScene.log.write(ERR, errorMessages['missing_textlayers'], e);
-    }
-}
-/*
- * This function scans the custom assets bins and looks for the first word in the name
- * of the bin. If that name matches "which", it switches that asset with the type specified
- * in the conditional tree of the function. Currently only "team" and "away" are supported.
- * @param {string} which - "team" or "away"
- */
-function switchCustomAssets (which) {
-    for (var i=1; i<=NUM_CUSTOM_ASSETS; i++){
-        // lookup the name of each custom asset bin
-        var assetTag = liveScene.templateLookup('asset{0}_bin'.format(i));
-        // if [which] is the first word in the folder name
-        if (assetTag.toLowerCase().indexOf(which) === 0){
-            try {
-                // get the bin itself now
-                var customAssetBin = getItem( assetTag, FolderItem ); 
-                if (!customAssetBin || customAssetBin.numItems > 1 || customAssetBin.numItems == 0) {
-                    continue;
-                } else {
-                    // since the file extension is not known (could be .mov or .png or whatever)
-                    // the extension has to be stored as a variable
-                    var avitem = customAssetBin.item(1);
-                    var ext = avitem.name.split('.')
-                    ext = ext[ext.length-1];
-                }
-                // ADD NEW TYPES HERE (currently only TEAM and AWAY)
-                var id = "";
-                // "id" is the file name prefix of the new asset to load. This will vary 
-                // based on "which" and must be programmed for new categories.
-                if (which === "team") {
-                    id = liveScene.teams[0].id;     
-                } else if (which === "away") {
-                    id = liveScene.teams[1].id;
-                }
-            } catch(e) {
-                liveScene.log.write(WARN, errorMessages['missing_template']);
-            }
-            try {
-                // If everything is ready, now actually switch the asset using the custom asset folder, 
-                // the id of the new asset, and the extension
-                var customAssetDir = liveScene.getFolder("customasset0{0}".format(i));
-                var newAsset = new File ("{0}/{1}.{2}".format(customAssetDir, id, ext));
-                avitem.replace(newAsset);
-            } catch(e) {
-                liveScene.log.write(WARN, 'Couldn\'t load custom asset {0} for {1}.'.format(i, id));
-            }
-        }
-    }
-}
-/*
- * This function will eval the contents of the custom user scripts fields in the UI.
- * @param {string} which - The field to eval() ('team', 'away', etc)
- */
-function evalUserScripts (which) {
-    if (!which) return false;
-    // get the script holder comp for which
-    var comp = liveScene.templateLookup('{0}Script'.format(which));
-    comp = getItem(comp);
-    if (!comp) {
-        // No big deal if it's missing, just log a warning
-        liveScene.log.write(WARN, errorMessages['missing_template']);
-        return null;
-    } else {
-        try {
-            // Eval the comment on the script holder comp
-            eval(comp.comment);
-        } catch(e) {
-            // Error if the eval fails
-            liveScene.log.write(ERR, errorMessages['failed_eval'], e);
-        }
-    }
-}
 
 function getRenderComps (wip) {
     (wip === undefined) ? wip = false : wip = true;
     // prep objects 
     var renderComps = [];
 
-    var renderCompBin = getItem(liveScene.templateLookup("render_bin"), FolderItem);
-    var outputDir = liveScene.getFolder("qt_final");
+    var renderCompBin = getItem(this.sceneData.templateLookup("render_bin"), FolderItem);
+    var outputDir = this.sceneData.getFolder("qt_final");
     // check for the bin with the render comps
     if (!renderCompBin){
-        liveScene.log.write(ERR, errorMessages['missing_template']);
+        this.sceneData.log.write(ERR, errorMessages['missing_template']);
     }
     // array all render comps
     for (var i=1; i<=renderCompBin.items.length; i++){
@@ -546,7 +547,7 @@ function getRenderComps (wip) {
     if (wip) {
         try {
             // check for the destination bin for WIP render comps
-            var wipBin = liveScene.templateLookup('wiprenderbin', FolderItem);
+            var wipBin = this.sceneData.templateLookup('wiprenderbin', FolderItem);
             wipBin = getItem(wipBin, FolderItem);
             
             while(true){
@@ -554,9 +555,9 @@ function getRenderComps (wip) {
                 catch(e) { break; }
             }            
             // find the WIP template comp
-            var wipRenderGuides = getItem(liveScene.templateLookup("bottomline"));
+            var wipRenderGuides = getItem(this.sceneData.templateLookup("bottomline"));
             // redirect render output to WIP folder
-            outputDir = liveScene.getFolder("qt_wip");
+            outputDir = this.sceneData.getFolder("qt_wip");
             for (var i in renderComps){
                 if (!renderComps.hasOwnProperty(i)) continue;
                 // duplicate the WIP template
@@ -566,10 +567,10 @@ function getRenderComps (wip) {
                 c.moveToEnd();
                 wipComp.duration = renderComps[i].duration;
 
-                var dash = getItem( liveScene.templateLookup("dashboard") );
+                var dash = getItem( this.sceneData.templateLookup("dashboard") );
 
                 var exp = """project = comp('{0}').layer('{1}').text.sourceText;scene = comp('{0}').layer('{2}').text.sourceText;if (scene != '') (project + '_' + scene + ' v{3}') else (project + ' v{3}');"""
-                exp = exp.format(dash.name, "PROJECT NAME", "SCENE NAME", zeroFill(liveScene.version, 3));
+                exp = exp.format(dash.name, "PROJECT NAME", "SCENE NAME", zeroFill(this.sceneData.version, 3));
                 wipComp.layer('Project').text.sourceText.expression = exp;
                 // move it to the WIP bin
                 wipComp.parentFolder = wipBin;
@@ -579,7 +580,7 @@ function getRenderComps (wip) {
                 renderComps[i] = wipComp;
             }
         } catch(e) {
-            liveScene.log.write(ERR, errorMessages['failed_wipque'], e);
+            this.sceneData.log.write(ERR, errorMessages['failed_wipque'], e);
         }
     }
     return renderComps;
