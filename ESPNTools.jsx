@@ -12,6 +12,7 @@
 #target aftereffects
 
 $.evalFile(((new File($.fileName)).parent).toString() + '/lib/aeCore.jsx');
+$.evalFile(((new File($.fileName)).parent).toString() + '/lib/aeTemplate.jsx');
 $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
 
 /*********************************************************************************************
@@ -26,9 +27,6 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
     // tempScene is a SceneData object used as a buffer to verify user input and changes to
     // the active AfterEffects project.
     var tempScene;
-
-    var dashboard;
-
 
     // the number of custom assets to search for when switching
     var NUM_CUSTOM_ASSETS = 5;
@@ -88,6 +86,7 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
             liveScene = tempScene;
             // Populate the UI with the active data
             initializeFromLiveScene();
+            initializeLinkToScene();
             liveScene.log.write(INFO, 'Loaded {0}'.format(liveScene.project));
         // If the scene has a valid pipeline tag, but the server location isn't there for some reason
         } else if (tempScene.status === STATUS.NO_DEST) {
@@ -96,6 +95,7 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
             liveScene.log.write(WARN, msg);
             // Warn the user but load it anyway
             initializeFromLiveScene();
+            initializeLinkToScene();
         }
         // There is no pipeline tag, so treat it as a new project file
         else {
@@ -492,7 +492,6 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
         liveScene.setCustom('D', textD);
         
         switchCustomText();
-        switchDashboardTag();
         evalUserScripts('cust');
     }
     /*
@@ -504,8 +503,8 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
         
         liveScene.setTeam(0, teamid.toString());
         
-        switchTeam(0);
-        switchDashboardTag();
+        switchLogosheet('team');
+        switchDashboardTextLayers('team');
         switchCustomAssets('team');
         evalUserScripts('team');
     }
@@ -518,8 +517,8 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
         
         liveScene.setTeam(1, teamid.toString());
         
-        switchTeam(1);
-        switchDashboardTag();
+        switchLogosheet('away');
+        switchDashboardTextLayers('away');
         switchCustomAssets('away');
         evalUserScripts('away');
     }
@@ -529,10 +528,11 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
     function changedShow () {
         var showid = dlg.grp.tabs.version.div.fields.shows.dd.selection;
         if (showid.toString() === liveScene.show.id) return null;
+        
         liveScene.setShow(showid.toString());
         
-        switchShow();
-        switchDashboardTag();
+        switchLogosheet('show');
+        switchDashboardTextLayers('show');
         switchCustomAssets('show');
         evaluserScripts('show');
     }
@@ -583,7 +583,6 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
             comp.comment = input.toString();
         }
     }
-    
     /*********************************************************************************************
      * VALIDATION / FOLDER CREATION / FILE SAVING
      * These functions will validate the tempScene object, allow the tempScene to be pushed live,
@@ -670,461 +669,7 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
         } else return false;
     }
 
-    /*********************************************************************************************
-    TEMPLATE BUILDERS
-    *********************************************************************************************/
-    /*
-     * This builds the AfterEffects 'template' scene from the production's platform database. This 
-     * function also builds and loads other production-specific toolkit items (team assets, 
-     * the dashboard, etc.) 
-     * This can all be rolled into one function at some point -- right now it is really slow.
-     */
-    function buildProjectTemplate () {
-        // Check for platform-specific JSON & load it if necessary
-        var templateData = liveScene.prod.getPlatformData()['Template'];
-        // Build the bin/folder tree from JSON
-        buildProjectFromJson( templateData );
-        buildDashboard();
-        buildGuidelayer();
-        buildRepairLogosheetComp('team');
-        buildRepairLogosheetComp('away');
-        buildRepairLogosheetComp('show');
-        //loadSponsorAssets();
-        loadCustomAssets();
-        buildToolkittedPrecomps();
-    }
-    /*
-     * TODO: ADD COMMENTS
-     */
-    function buildOfflineProjectTemplate() {
-        var templateCheck = getItem( liveScene.templateLookup('dashboard') );
-        if (templateCheck === undefined) 
-            buildProjectTemplate();
-        loadOfflineAssets('team');
-        loadOfflineAssets('show');
-        loadOfflineAssets('away');
-        /*
-        loadOfflineAssets('asset1');
-        loadOfflineAssets('asset2');
-        loadOfflineAssets('asset3');
-        loadOfflineAssets('asset4');
-        loadOfflineAssets('asset5');
-        */
-        
-        buildOfflineDashboard();
-    }
-    /*
-     * This builds and sets up the dashboard comp for the project. This is mostly text layers
-     * that are used for toolkit expression links. These text layers get changed directly when 
-     * the user interacts with the UI.
-     */
-    function buildDashboard () {
-        // Text layer names for versioning
-        var textLayers = [
-            "SHOW NAME",
-            "TEAM NAME",
-            "NICKNAME",
-            "LOCATION",
-            "TRICODE",
-            "AWAY TEAM NAME",
-            "AWAY NICKNAME",
-            "AWAY LOCATION",
-            "AWAY TRICODE",
-            "CUSTOM TEXT A",
-            "CUSTOM TEXT B",
-            "CUSTOM TEXT C",
-            "CUSTOM TEXT D"
-        ];
 
-        try {
-            // Build a null used for scaling
-            var pNull = dashboard.layer('Scaler Null');
-            if (!pNull) {
-                pNull = dashboard.layers.addNull();
-                pNull.name = 'Scaler Null';
-                pNull.transform.position.setValue([68,60,0]);
-            }
-            // Reset the null to 100%
-            pNull.transform.scale.setValue([100,100,100]);
-            // Calculate the new scale based on # of text layers
-            var scale = (840 / (textLayers.length * 115)) * 100;
-            // add background solid
-            if (!(dashboard.layer('BACKGROUND'))){
-                var bgnd = dashboard.layers.addSolid([0.17,0.17,0.17], 'BACKGROUND', 1920, 1080, 1.0, 60);
-                bgnd.locked = true;
-            }
-
-            // build text layers based on the list above
-            var ypi = 120;
-            var pos = [65,80,0];
-            for (var tl in textLayers){
-                if (!textLayers.hasOwnProperty(tl)) continue;
-                buildDashboardTextLayer(textLayers[tl], pNull, pos);
-                // change the Y value for the next time around the loop
-                pos[1] += ypi;
-            }
-            // after building the text layers, set the scale of the null
-            pNull.transform.scale.setValue([scale,scale,scale]);
-        } catch (e) {
-            liveScene.log.write(ERR, errorMessages['failed_build'], e);
-        }        
-    }
-    /*
-     * This modifies the dashboard to work as an offline version, which requires the building
-     * of additional support comps.
-     */
-    function buildOfflineDashboard () {
-        var w = 100;
-        var h = 100;
-        var d = 1;
-        var par = 1.0;
-        var fr = 59.94;
-        
-        var teamNameComp = app.project.items.addComp('Team Names', w,h,par,d,fr);
-        var teamNicknameComp = app.project.items.addComp('Team Nicknames', w,h,par,d,fr);
-        var teamTricodeComp = app.project.items.addComp('Team Tricodes', w,h,par,d,fr);
-        var teamLocationComp = app.project.items.addComp('Team Locations', w,h,par,d,fr);
-        var awayNameComp = app.project.items.addComp('Away Names', w,h,par,d,fr);
-        var awayNicknameComp = app.project.items.addComp('Away Nicknames', w,h,par,d,fr);
-        var awayTricodeComp = app.project.items.addComp('Away Tricodes', w,h,par,d,fr);
-        var awayLocationComp = app.project.items.addComp('Away Locations', w,h,par,d,fr);
-        var showNameComp = app.project.items.addComp('Show Names', w,h,par,d,fr);
-        
-        var scriptBin = getItem( liveScene.templateLookup('script_bin'), FolderItem );
-        
-        teamNameComp.parentFolder = scriptBin;
-        teamNicknameComp.parentFolder = scriptBin;
-        teamTricodeComp.parentFolder = scriptBin;
-        teamLocationComp.parentFolder = scriptBin;
-        awayNameComp.parentFolder = scriptBin;
-        awayNicknameComp.parentFolder = scriptBin;
-        awayTricodeComp.parentFolder = scriptBin;
-        awayLocationComp.parentFolder = scriptBin;
-        showNameComp.parentFolder = scriptBin;
-        
-        //for (t in liveScene.prod.teamlist){
-        for (var i=0; i<liveScene.prod.teamlist.length; i++){
-            var t = liveScene.prod.teamlist[i];
-            if (t === "NULL" || t === "ESPN_META") continue;
-            
-            var team = liveScene.prod.teams[t];
-          
-            var n;
-            n = teamNameComp.layers.addNull(d);
-            n.name = team["DISPLAY NAME"];
-            n.moveToEnd();
-        
-            n = teamNicknameComp.layers.addNull(d);
-            n.name = team["NICKNAME"];
-            n.moveToEnd();
-
-            n = teamTricodeComp.layers.addNull(d);
-            n.name = team["TRI"];
-            n.moveToEnd();
-            
-            n = teamLocationComp.layers.addNull(d);
-            n.name = team["LOCATION"];
-            n.moveToEnd();            
-            
-            n = awayNameComp.layers.addNull(d);
-            n.name = team["DISPLAY NAME"];
-            n.moveToEnd();
-            
-            n = awayNicknameComp.layers.addNull(d);
-            n.name = team["NICKNAME"];
-            n.moveToEnd();
-            
-            n = awayTricodeComp.layers.addNull(d);
-            n.name = team["TRI"];
-            n.moveToEnd();
-            
-            n = awayLocationComp.layers.addNull(d);
-            n.name = team["LOCATION"];
-            n.moveToEnd();
-            
-        }
-
-        //for (s in liveScene.prod.showlist){
-        for (var i=0; i<liveScene.prod.showlist.length; i++){
-            //if (!liveScene.prod.showlist.hasOwnProperty(s)) continue;
-            var s = liveScene.prod.showlist[i];
-            var show = liveScene.prod.shows[s];
-            var n;
-            n = showNameComp.layers.addNull(d);
-            n.name = show["NAME"];
-            n.moveToEnd();
-        }
-        
-        var dashboard = getItem( liveScene.templateLookup('dashboard') );
-        try {
-            //if (thisComp.layer('{0}').effect('{1}')('Layer').index == thisLayer.index) 100 else 0".format(ctrlnull.name, ctrlsel.name);
-    
-            dashboard.layer('SHOW NAME').text.sourceText.expression = "comp('Show Names').layer( comp('Show Logosheet Master Switch').layer(1).effect('SHOW Picker').layer.index-1 ).name";
-            
-            dashboard.layer('TEAM NAME').text.sourceText.expression = "comp('Team Names').layer( comp('Team Logosheet Master Switch').layer(1).effect('TEAM Picker').layer.index-1 ).name";
-            dashboard.layer('NICKNAME').text.sourceText.expression = "comp('Team Nicknames').layer( comp('Team Logosheet Master Switch').layer(1).effect('TEAM Picker').layer.index-1 ).name";
-            dashboard.layer('TRICODE').text.sourceText.expression = "comp('Team Tricodes').layer( comp('Team Logosheet Master Switch').layer(1).effect('TEAM Picker').layer.index-1 ).name";
-            dashboard.layer('LOCATION').text.sourceText.expression = "comp('Team Locations').layer( comp('Team Logosheet Master Switch').layer(1).effect('TEAM Picker').layer.index-1 ).name";
-
-            dashboard.layer('AWAY TEAM NAME').text.sourceText.expression = "comp('Team Names').layer( comp('Away Logosheet Master Switch').layer(1).effect('TEAM Picker').layer.index-1 ).name";
-            dashboard.layer('AWAY NICKNAME').text.sourceText.expression = "comp('Team Nicknames').layer( comp('Away Logosheet Master Switch').layer(1).effect('TEAM Picker').layer.index-1 ).name";
-            dashboard.layer('AWAY TRICODE').text.sourceText.expression = "comp('Team Tricodes').layer( comp('Away Logosheet Master Switch').layer(1).effect('TEAM Picker').layer.index-1 ).name";
-            dashboard.layer('AWAY LOCATION').text.sourceText.expression = "comp('Team Locations').layer( comp('Away Logosheet Master Switch').layer(1).effect('TEAM Picker').layer.index-1 ).name";
-
-        } catch(e) {
-            liveScene.log.write(ERR, errorMessages['missing_template'], e);            
-        }        
-    }
-    /*
-     * Build the precomp used for the guide layer in WIP renders. Includes the bottom line
-     * and a project name / version / timecode burn-in at the bottom of the screen.
-     */
-    function buildGuidelayer () {
-        // Text layer settings
-        var font = "Tw Cen MT Condensed";
-        var fontSize = 67;
-        var tcPos = [1651, 1071];
-        // Get the reqired objects from the project bin
-        var guidelayerComp = getItem( liveScene.templateLookup('bottomline') );
-        var guidelayerBin  = getItem( liveScene.templateLookup('guides_bin'), FolderItem );
-        var botline        = getItem('Bottomline.tga', FootageItem);
-        // Load the bottomline.tga into the project if needed
-        if (!botline) {
-            try {
-                var botline = getGlobalAssets()['bottomline'];
-                if ($.os.indexOf('Macintosh') > -1) 
-                    botline = botline.replace('Y:','/Volumes/cagenas');
-                botline = importFile(botline, guideLayerBin);
-            } catch (e) {
-                liveScene.log.write(ERR, errorMessages['failed_build'], e);
-            }
-        }
-        // Delete all the layers from the comp (?? i don't remember why this is here)
-        while (true) {
-            try { 
-                guidelayerComp.layer(1).locked = false;
-                guidelayerComp.layer(1).remove();
-            }
-            catch(e) { break; }
-        }
-        // add the bottomline
-        var blLayer = guidelayerComp.layers.add(botline);
-        blLayer.locked = true;
-        // add the timecode and project name layers
-        var tcLayer = buildTextLayer('', guidelayerComp, tcPos, font, fontSize, 0, 'Timecode', true);
-        tcLayer.text.sourceText.expression = "timeToTimecode();";
-    }
-    /*
-     * Builds the comps for a logosheet based on the JSON data stored in the production's ae.json.
-     * 'tag' is an optional flag that will prepend a string to the precomp names (e.g. for HOME and AWAY)
-     */
-    function buildComps(layout, sheet, bin, tag, skipExisting) {
-        (skipExisting === undefined) ? skipExisting = true : skipExisting = false;
-        // c is a comp defined in the logosheet JSON data
-        for (c in layout){
-            if (!layout.hasOwnProperty(c)) continue;
-            // Add "HOME" or "AWAY" to the comp name
-            var name = c;
-            if (tag !== undefined) name = "{0}{1}".format(tag, name);
-            // Skip the comp if it already exists
-            var comp = getItem(name);
-            // the "force" flag is applied during offline conversions.
-            // ordinarily (when force is false) existing comps are simply skipped over
-            if (comp !== undefined && skipExisting === true){
-                continue;
-            }
-            // Build the comp from JSON data
-            try {
-                // when skipExisting is false, it is *assumed* that the precomps exist, are empty, and need the layers re-added.
-                if (comp == undefined)
-                    comp = app.project.items.addComp(name, layout[c]["Size"][0], layout[c]["Size"][1], 1.0, 60, 59.94);   
-                comp.parentFolder = bin;
-                layer = comp.layers.add(sheet);
-                layer.position.setValue(layout[c]["Pos"]);
-                layer.anchorPoint.setValue(layout[c]["Anx"]);
-                layer.scale.setValue(layout[c]["Scl"]);
-                layer.collapseTransformation = true;                    
-            } catch(e) {
-                liveScene.log.write(WARN, errorMessages['missing_template'], e);
-            }
-        }
-    }
-    /*
-     * Builds the logo slick precomps set up in the production's platform database (ae.json)
-     */
-    function buildToolkittedPrecomps () {
-        // Get the project items needed
-        var homeLogosheetComp = getItem( liveScene.templateLookup('teamsheet') );
-        var awayLogosheetComp = getItem( liveScene.templateLookup('awaysheet') );
-        var showLogosheetComp = getItem( liveScene.templateLookup('showsheet') );
-        var precompsBin       = getItem( liveScene.templateLookup('precomps_bin'), FolderItem );
-        // If any are missing, bail out
-        if (homeLogosheetComp === undefined || awayLogosheetComp === undefined || showLogosheetComp === undefined || precompsBin === undefined) {
-            liveScene.log.write(ERR, errorMessages['missing_template']);
-        }
-        // Get the precomp layout from the platform database (only teams right now)
-        var teamLayout = liveScene.prod.getPlatformData()['Team Logosheet'];
-        var showLayout = liveScene.prod.getPlatformData()['Show Logosheet'];
-        
-        // Build the home and away team precomps
-        try {
-            buildComps( teamLayout, homeLogosheetComp, precompsBin, 'HOME ' );
-            buildComps( teamLayout, awayLogosheetComp, precompsBin, 'AWAY ' );
-        } catch(e) {
-            liveScene.log.write(ERR, errorMessages['failed_build'], e);
-        }
-        
-        try {
-            buildComps( showLayout, showLogosheetComp, precompsBin );
-        } catch(e) {
-            liveScene.log.write(WARN, errorMessages['failed_build'], e);
-        }
-    }
-    /*
-     * This looks for any custom asset bins in the current project and will load the correct
-     * custom asset footage into the bin.
-     */
-    function loadCustomAssets () {
-        if (liveScene.prod.name === "NULL") return false;
-        // Look for each custom asset
-        for (var i=1; i<=NUM_CUSTOM_ASSETS; i++) {
-            try {
-                // lookup the name of the bin in the ae database
-                var customAssetBin = getItem( liveScene.templateLookup('asset{0}_bin'.format(i)), FolderItem );
-                if (!customAssetBin) continue;
-                // if it exists and is empty
-                if (customAssetBin.numItems === 0) {
-                    // lookup the asset folder on the server for that custom asset
-                    var customAssetFolder = new Folder( liveScene.getFolder("customasset0{0}".format(i)) );
-                    // load a random(-ish) file from that asset folder and put it in the bin
-                    var firstFile = customAssetFolder.getFiles()[0];
-                    var imOptions = new ImportOptions();
-                    imOptions.file = firstFile;
-                    imOptions.sequence = false;
-                    imOptions.importAs = ImportAsType.FOOTAGE;
-                    var avitem = app.project.importFile(imOptions);
-                    avitem.parentFolder = customAssetBin;   
-                }
-            // Log any errors
-            } catch(e) { 
-                liveScene.log.write(ERR, errorMessages['failed_build'], e);
-            }
-        }
-    }
-
-    /*********************************************************************************************
-     * SWITCH FUNCTIONS
-     * These functions directly alter the loaded After Effects project, sourcing information from
-     * the liveScene object *only*.
-     ********************************************************************************************/
-    /*
-     * Sets the liveScene metadata on the pipelined scene's dashboard tag
-     * TODO: RENAME THIS
-     */
-    function switchDashboardTag () {
-        try {
-            dashboard.comment = liveScene.getTag().toString();
-            setDashboardLayer('PROJECT_NAME', liveScene.project.toString());
-            setDashboardLayer('SCENE_NAME', liveScene.name.toString());
-            setDashboardLayer('VERSION', 'v' + zeroFill(liveScene.version.toString(), 3));
-        } catch (e) {
-            tempScene.log.write(ERR, errorMessages['failed_tagging'], e);
-            return false;
-        }
-        return true;
-    }
-
-    /*
-     * TODO: ADD COMMENTS
-     */
-    function switchCustomText () {
-        var dashComp = getItem( liveScene.templateLookup('dashboard') );
-        if (dashComp === undefined){
-            liveScene.log.write(ERR, errorMessages['missing_dashboard']);
-            return null;
-        }
-        var cust = ['A','B','C','D'];
-        try {
-            for (s in cust){
-                if (!cust.hasOwnProperty(s)) continue;
-                dashComp.layer('CUSTOM TEXT {0}'.format(cust[s])).property("Text").property("Source Text").setValue(liveScene["custom{0}".format(cust[s])]);
-            }            
-        } catch(e) {
-            liveScene.log.write(ERR, errorMessages['missing_textlayers'], e);
-        }
-    }
-    /*
-     * This function scans the custom assets bins and looks for the first word in the name
-     * of the bin. If that name matches "which", it switches that asset with the type specified
-     * in the conditional tree of the function. Currently only "team" and "away" are supported.
-     * @param {string} which - "team" or "away"
-     */
-    function switchCustomAssets (which) {
-        for (var i=1; i<=NUM_CUSTOM_ASSETS; i++){
-            // lookup the name of each custom asset bin
-            var assetTag = liveScene.templateLookup('asset{0}_bin'.format(i));
-            // if [which] is the first word in the folder name
-            if (assetTag.toLowerCase().indexOf(which) === 0){
-                try {
-                    // get the bin itself now
-                    var customAssetBin = getItem( assetTag, FolderItem ); 
-                    if (!customAssetBin || customAssetBin.numItems > 1 || customAssetBin.numItems == 0) {
-                        continue;
-                    } else {
-                        // since the file extension is not known (could be .mov or .png or whatever)
-                        // the extension has to be stored as a variable
-                        var avitem = customAssetBin.item(1);
-                        var ext = avitem.name.split('.')
-                        ext = ext[ext.length-1];
-                    }
-                    // ADD NEW TYPES HERE (currently only TEAM and AWAY)
-                    var id = "";
-                    // "id" is the file name prefix of the new asset to load. This will vary 
-                    // based on "which" and must be programmed for new categories.
-                    if (which === "team") {
-                        id = liveScene.teams[0].id;     
-                    } else if (which === "away") {
-                        id = liveScene.teams[1].id;
-                    }
-                } catch(e) {
-                    liveScene.log.write(WARN, errorMessages['missing_template']);
-                }
-                try {
-                    // If everything is ready, now actually switch the asset using the custom asset folder, 
-                    // the id of the new asset, and the extension
-                    var customAssetDir = liveScene.getFolder("customasset0{0}".format(i));
-                    var newAsset = new File ("{0}/{1}.{2}".format(customAssetDir, id, ext));
-                    avitem.replace(newAsset);
-                } catch(e) {
-                    liveScene.log.write(WARN, 'Couldn\'t load custom asset {0} for {1}.'.format(i, id));
-                }
-            }
-        }
-    }
-    /*
-     * This function will eval the contents of the custom user scripts fields in the UI.
-     * @param {string} which - The field to eval() ('team', 'away', etc)
-     */
-    function evalUserScripts (which) {
-        if (!which) return false;
-        // get the script holder comp for which
-        var comp = liveScene.templateLookup('{0}Script'.format(which));
-        comp = getItem(comp);
-        if (!comp) {
-            // No big deal if it's missing, just log a warning
-            liveScene.log.write(WARN, errorMessages['missing_template']);
-            return null;
-        } else {
-            try {
-                // Eval the comment on the script holder comp
-                eval(comp.comment);
-            } catch(e) {
-                // Error if the eval fails
-                liveScene.log.write(ERR, errorMessages['failed_eval'], e);
-            }
-        }
-    }
-    
     /*********************************************************************************************
     AUTOMATION TOOLS
     *********************************************************************************************/
@@ -1260,65 +805,6 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
     /*********************************************************************************************
     RENDER QUEUEING
     *********************************************************************************************/
-    function getRenderComps (wip) {
-        (wip === undefined) ? wip = false : wip = true;
-        // prep objects 
-        var renderComps = [];
-        
-        var renderCompBin = getItem(liveScene.templateLookup("render_bin"), FolderItem);
-        var outputDir = liveScene.getFolder("qt_final");
-        // check for the bin with the render comps
-        if (!renderCompBin){
-            liveScene.log.write(ERR, errorMessages['missing_template']);
-        }
-        // array all render comps
-        for (var i=1; i<=renderCompBin.items.length; i++){
-            renderComps.push(renderCompBin.items[i]);
-        }               
-        // extra steps to prepare "WIP" versions of render comps
-        if (wip) {
-            try {
-                // check for the destination bin for WIP render comps
-                var wipBin = liveScene.templateLookup('wiprenderbin', FolderItem);
-                wipBin = getItem(wipBin, FolderItem);
-                
-                while(true){
-                    try { wipBin.items[1].remove(); }
-                    catch(e) { break; }
-                }            
-                // find the WIP template comp
-                var wipRenderGuides = getItem(liveScene.templateLookup("bottomline"));
-                // redirect render output to WIP folder
-                outputDir = liveScene.getFolder("qt_wip");
-                for (var i in renderComps){
-                    if (!renderComps.hasOwnProperty(i)) continue;
-                    // duplicate the WIP template
-                    var wipComp = wipRenderGuides.duplicate();
-                    // add the render comp to the duped template
-                    var c = wipComp.layers.add(renderComps[i]);
-                    c.moveToEnd();
-                    wipComp.duration = renderComps[i].duration;
-
-                    var dash = getItem( liveScene.templateLookup("dashboard") );
-
-                    var exp = """project = comp('{0}').layer('{1}').text.sourceText;\
-scene = comp('{0}').layer('{2}').text.sourceText;\
-if (scene != '') (project + '_' + scene + ' v{3}') else (project + ' v{3}');""".format(dash.name, "PROJECT NAME", "SCENE NAME", zeroFill(liveScene.version, 3));
-                    wipComp.layer('Project').text.sourceText.expression = exp;
-                    // move it to the WIP bin
-                    wipComp.parentFolder = wipBin;
-                    // add a timestamp to the comp name
-                    wipComp.name = renderComps[i].name + timestamp();
-                    // replace the comp in the array with the wip version
-                    renderComps[i] = wipComp;
-                }
-            } catch(e) {
-                liveScene.log.write(ERR, errorMessages['failed_wipque'], e);
-            }
-        }
-        return renderComps;
-    }
-    
     function addRenderCompsToQueue ( wip ) {
         var movName;
         var outputDir;
