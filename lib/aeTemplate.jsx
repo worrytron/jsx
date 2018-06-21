@@ -1,3 +1,19 @@
+/*
+
+var link = new SceneLink(liveScene);
+link.Init();
+
+if (link.linked < 1) {
+    #scene has not linked properly
+}
+
+*/
+#target aftereffects
+
+// Locations for render .bat files
+var RENDER_BAT_FILE = new File("~/aeRenderList.bat");
+var EDIT_BAT_FILE   = new File("~/editRenderList.bat");
+
 function SceneLink (sceneData) {
     if (!sceneData || !sceneData.STATUS_OK) {
         return false;
@@ -16,7 +32,6 @@ function SceneLink (sceneData) {
     this.Init = function (sceneData) {
         this.sceneData = sceneData;
         this.linked = this.Link();
-        return this;
     };
 
     this.Link = function () {
@@ -336,6 +351,146 @@ function SceneLink (sceneData) {
     }
 
     /*********************************************************************************************
+     * UTILITY FUNCTIONS
+     * These are helper functions for pulling and setting scenedata
+     ********************************************************************************************/
+    this.GetRenderComps = function () {
+        if (!this.TestLink()){
+            this.sceneData.log.write(ERR, errorMessages['missing_template']);
+        }
+        // prep objects 
+        var renderComps = [];
+
+        var outputDir = this.sceneData.getFolder("qt_final");
+        // check for the bin with the render comps
+        // array all render comps
+        for (var i=1; i<=this.renderCompBin.items.length; i++){
+            renderComps.push(this.renderCompBin.items[i]);
+        }               
+        // removed WIP render options in 1.1
+
+        return renderComps;
+    }
+
+    /*********************************************************************************************
+    RENDER QUEUEING
+    *********************************************************************************************/
+    this.AddRenderCompsToQueue = function () {
+        var movName;
+        var outputDir;
+        var renderComps = getRenderComps();
+                
+        // deactivate all current items
+        var RQitems = app.project.renderQueue.items;
+        for (var i=1; i<=RQitems.length; i++){
+            try {
+                RQitems[i].render = false;
+            } catch(e) { null; }
+        }
+        try {
+            for (c in renderComps){
+                if (!renderComps.hasOwnProperty(c)) continue;
+                var rqi = RQitems.add( renderComps[c] );
+                rqi.outputModules[1].applyTemplate("QT RGBA STRAIGHT")
+                movName = sceneData.getRenderName(renderComps[c].name, "mov");
+                if (wip === undefined){
+                    outputDir = sceneData.getFolder("qt_final");    
+                } else {
+                    outputDir = sceneData.getFolder("qt_wip"); 
+                }
+                rqi.outputModules[1].file = new File (outputDir +'/'+ movName); 
+            }            
+        } catch(e) {
+            sceneData.log.write(ERR, errorMessages['failed_queue'], e);
+        }
+    }
+
+    this.AddProjectToBatch = function () {
+        // opens the bat file, adds a new line with the scene, and closes it
+        var aepFile = app.project.file.fsName.toString();
+        var execStr = "\"C:\\Program Files\\Adobe\\Adobe After Effects CC 2015\\Support Files\\aerender.exe\" -mp -project \"{0}\"".format(aepFile);
+        RENDER_BAT_FILE.open("a");
+        try{
+            RENDER_BAT_FILE.writeln(execStr);            
+        } catch(e) { 
+            null;
+        } finally {
+            RENDER_BAT_FILE.close();
+        }  
+    }
+    
+    this.OpenBatchForEditing = function () {
+        // opens the bat file for editing in notepad
+        var execStr = "start \"\" notepad {0}".format(RENDER_BAT_FILE.fsName.toString());
+        EDIT_BAT_FILE.open("w");
+        EDIT_BAT_FILE.write(execStr);
+        EDIT_BAT_FILE.execute();
+    }
+    
+    this.RunBatch = function () {
+        // executes the bat file
+        RENDER_BAT_FILE.execute();
+    }
+    
+    this.StartNewBatch = function () {
+        RENDER_BAT_FILE.open("w");
+        RENDER_BAT_FILE.close();
+    }
+
+    /*
+     * When the liveScene is ready to be synchronized to AfterEffects and saved to the network,
+     * this function pushes the tempScene to the liveScene, verifies that the handoff was successful,
+     * prompts the user for overwrite confirmation (if necessary). Once that's done, it saves the
+     * file (and its backup) to the network. 
+     */
+    this.SaveWithBackup = function (ignore_warning) {
+        (!ignore_warning) ? ignore_warning = false : ignore_warning = true;
+        
+        var sync = pushTempToLive();
+        if (!sync || 
+            sceneData.status === STATUS.NO_DEST || 
+            sceneData.status === STATUS.CHECK_DEST || 
+            sceneData.status === STATUS.UNDEFINED) {
+            
+            sceneData.log.write(ERR, errorMessages['invalid_scenedata']);
+            return false;
+        }
+        // STATUS.OK_WARN means that the save location is valid, but there's an existing file there.
+        // Therefore the user must confirm that this is what they want to do.
+        if ( sceneData.status === STATUS.OK_WARN && ignore_warning === false){
+            var msg = 'This will overwrite an existing scene. Continue?';
+            if (!Window.confirm(msg)) return false;
+        }
+        // Final check for correct status flags -- 
+        if ( sceneData.status === STATUS.OK || 
+             sceneData.status === STATUS.OK_WARN ){
+            // get a filename for the scene
+            var aepFile = new File(sceneData.getFullPath()['primary']);
+            // save the file
+            try {
+                app.project.save(aepFile);
+            } catch (e) {
+                sceneData.log.write(ERR, errorMessages['failed_save'], e);
+            }
+            // make a copy of the file as a backup
+            try {
+                aepFile.copy( sceneData.getFullPath()['backup'] );
+             } catch (e) { 
+                sceneData.log.write(ERR, errorMessages['failed_backup'], e);
+            }/**/
+            return true;
+        } else return false;
+    }
+
+    this.SetMetadata = function () {
+
+    }
+
+    this.GetMetadata = function () {
+
+    }
+
+    /*********************************************************************************************
      * SWITCH FUNCTIONS
      * These functions directly alter the linked After Effects project.
      ********************************************************************************************/
@@ -528,60 +683,3 @@ function SceneLink (sceneData) {
 }
 
 
-function getRenderComps (wip) {
-    (wip === undefined) ? wip = false : wip = true;
-    // prep objects 
-    var renderComps = [];
-
-    var renderCompBin = getItem(this.sceneData.templateLookup("render_bin"), FolderItem);
-    var outputDir = this.sceneData.getFolder("qt_final");
-    // check for the bin with the render comps
-    if (!renderCompBin){
-        this.sceneData.log.write(ERR, errorMessages['missing_template']);
-    }
-    // array all render comps
-    for (var i=1; i<=renderCompBin.items.length; i++){
-        renderComps.push(renderCompBin.items[i]);
-    }               
-    // extra steps to prepare "WIP" versions of render comps
-    if (wip) {
-        try {
-            // check for the destination bin for WIP render comps
-            var wipBin = this.sceneData.templateLookup('wiprenderbin', FolderItem);
-            wipBin = getItem(wipBin, FolderItem);
-            
-            while(true){
-                try { wipBin.items[1].remove(); }
-                catch(e) { break; }
-            }            
-            // find the WIP template comp
-            var wipRenderGuides = getItem(this.sceneData.templateLookup("bottomline"));
-            // redirect render output to WIP folder
-            outputDir = this.sceneData.getFolder("qt_wip");
-            for (var i in renderComps){
-                if (!renderComps.hasOwnProperty(i)) continue;
-                // duplicate the WIP template
-                var wipComp = wipRenderGuides.duplicate();
-                // add the render comp to the duped template
-                var c = wipComp.layers.add(renderComps[i]);
-                c.moveToEnd();
-                wipComp.duration = renderComps[i].duration;
-
-                var dash = getItem( this.sceneData.templateLookup("dashboard") );
-
-                var exp = """project = comp('{0}').layer('{1}').text.sourceText;scene = comp('{0}').layer('{2}').text.sourceText;if (scene != '') (project + '_' + scene + ' v{3}') else (project + ' v{3}');"""
-                exp = exp.format(dash.name, "PROJECT NAME", "SCENE NAME", zeroFill(this.sceneData.version, 3));
-                wipComp.layer('Project').text.sourceText.expression = exp;
-                // move it to the WIP bin
-                wipComp.parentFolder = wipBin;
-                // add a timestamp to the comp name
-                wipComp.name = renderComps[i].name + timestamp();
-                // replace the comp in the array with the wip version
-                renderComps[i] = wipComp;
-            }
-        } catch(e) {
-            this.sceneData.log.write(ERR, errorMessages['failed_wipque'], e);
-        }
-    }
-    return renderComps;
-}

@@ -51,6 +51,27 @@ function getLayer(comp, layer_name){
 }
 
 /**
+ * Helper function for importing an AVItem (non-sequence)
+ * @params {FileObject} file - A file object to import
+ * @params {FolderItem} parent (optional) - A FolderItem to contain it
+ */
+function importFile (file, parent) {
+    parent === undefined ? parent = false : parent = parent;
+    try {
+        var imOptions = new ImportOptions();
+        imOptions.file = file;
+        imOptions.sequence = false;
+        imOptions.importAs = ImportAsType.FOOTAGE;
+        var avitem = app.project.importFile(imOptions);
+        if (parent) avitem.parentFolder = parent;
+    } catch (e) {
+        alert(e);
+        return false;
+    }
+    return avitem;
+}
+
+/**
  * Sets the comment value on a specified item in the project window
  * @params {AVItem} item - The AVItem to be commented
  * @params {string} comment - The comment to be added
@@ -120,7 +141,7 @@ function deselectAllLayers (comp){
  * Recursively builds a project bin (aka folder) tree from JSON data
  * @param {JSON} data - A json object with a folder structure
  */
-function buildProjectFromJson (data, parent) {
+function buildTemplateFromJson (data, parent) {
     for (k in data){
         if (!data.hasOwnProperty(k)) continue;
         // the eval("SomeItem") here is to be able to use getItem() to test whether this item

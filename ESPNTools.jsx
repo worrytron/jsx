@@ -3,17 +3,26 @@
  * @summary A suite of templating, toolkitting and automation tools for ESPN's AfterEffects
  * graphics and animation pipeline.
  *
- * @version 1.0.3
+ * @version 1.1.0
  * @author mark.rohrer@espn.com
- * @date 12/15/2017
+ * @date 6/16/18
  *
+ */
+
+/* TODO:
+ * Remove SceneData.templateLookup() function -- hard code values into SceneLink.Link()
+ * Overhaul SceneData/ProdData to unlink production from save location
+ * Overhaul UI to allow loading of any production
+ * Load custom data separately / optionally from rest of template (to reduce errors)
+ * Custom save locations for renders
+ * Remove render template requirement for renders (try/catch)
  */
 
 #target aftereffects
 
+$.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
 $.evalFile(((new File($.fileName)).parent).toString() + '/lib/aeCore.jsx');
 $.evalFile(((new File($.fileName)).parent).toString() + '/lib/aeTemplate.jsx');
-$.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
 
 /*********************************************************************************************
  * ESPNTools
@@ -31,9 +40,6 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
     // the number of custom assets to search for when switching
     var NUM_CUSTOM_ASSETS = 5;
     
-    // Locations for render .bat files
-    var RENDER_BAT_FILE = new File("~/aeRenderList.bat");
-    var EDIT_BAT_FILE   = new File("~/editRenderList.bat");
     var ERR  = 0;
     var WARN = 1;
     var INFO = 2;
@@ -624,52 +630,6 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
         }
         return success;
     }
-    /*
-     * When the liveScene is ready to be synchronized to AfterEffects and saved to the network,
-     * this function pushes the tempScene to the liveScene, verifies that the handoff was successful,
-     * prompts the user for overwrite confirmation (if necessary). Once that's done, it saves the
-     * file (and its backup) to the network. 
-     */
-    function saveWithBackup (ignore_warning) {
-        (!ignore_warning) ? ignore_warning = false : ignore_warning = true;
-        
-        var sync = pushTempToLive();
-        if (!sync || 
-            liveScene.status === STATUS.NO_DEST || 
-            liveScene.status === STATUS.CHECK_DEST || 
-            liveScene.status === STATUS.UNDEFINED) {
-            
-            liveScene.log.write(ERR, errorMessages['invalid_scenedata']);
-            return false;
-        }
-        // STATUS.OK_WARN means that the save location is valid, but there's an existing file there.
-        // Therefore the user must confirm that this is what they want to do.
-        if ( liveScene.status === STATUS.OK_WARN && ignore_warning === false){
-            var msg = 'This will overwrite an existing scene. Continue?';
-            if (!Window.confirm(msg)) return false;
-        }
-        // Final check for correct status flags -- 
-        if ( liveScene.status === STATUS.OK || 
-             liveScene.status === STATUS.OK_WARN ){
-            // get a filename for the scene
-            var aepFile = new File(liveScene.getFullPath()['primary']);
-            // save the file
-            try {
-                app.project.save(aepFile);
-            } catch (e) {
-                liveScene.log.write(ERR, errorMessages['failed_save'], e);
-            }
-            // make a copy of the file as a backup
-            try {
-                aepFile.copy( liveScene.getFullPath()['backup'] );
-             } catch (e) { 
-                liveScene.log.write(ERR, errorMessages['failed_backup'], e);
-            }/**/
-            return true;
-        } else return false;
-    }
-
-
     /*********************************************************************************************
     AUTOMATION TOOLS
     *********************************************************************************************/
@@ -800,71 +760,6 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
                 }
             }
         } catch(e) { alert('{0}: {1}'.format(e.line, e.message)) }
-    }
-
-    /*********************************************************************************************
-    RENDER QUEUEING
-    *********************************************************************************************/
-    function addRenderCompsToQueue ( wip ) {
-        var movName;
-        var outputDir;
-        var renderComps = getRenderComps( wip );
-                
-        // deactivate all current items
-        var RQitems = app.project.renderQueue.items;
-        for (var i=1; i<=RQitems.length; i++){
-            try {
-                RQitems[i].render = false;
-            } catch(e) { null; }
-        }
-        try {
-            for (c in renderComps){
-                if (!renderComps.hasOwnProperty(c)) continue;
-                var rqi = RQitems.add( renderComps[c] );
-                rqi.outputModules[1].applyTemplate("QT RGBA STRAIGHT")
-                movName = liveScene.getRenderName(renderComps[c].name, "mov");
-                if (wip === undefined){
-                    outputDir = liveScene.getFolder("qt_final");    
-                } else {
-                    outputDir = liveScene.getFolder("qt_wip"); 
-                }
-                rqi.outputModules[1].file = new File (outputDir +'/'+ movName); 
-            }            
-        } catch(e) {
-            liveScene.log.write(ERR, errorMessages['failed_queue'], e);
-        }
-    }
-
-    function addProjectToBatch () {
-        // opens the bat file, adds a new line with the scene, and closes it
-        var aepFile = app.project.file.fsName.toString();
-        var execStr = "\"C:\\Program Files\\Adobe\\Adobe After Effects CC 2015\\Support Files\\aerender.exe\" -mp -project \"{0}\"".format(aepFile);
-        RENDER_BAT_FILE.open("a");
-        try{
-            RENDER_BAT_FILE.writeln(execStr);            
-        } catch(e) { 
-            null;
-        } finally {
-            RENDER_BAT_FILE.close();
-        }  
-    }
-    
-    function openBatchForEditing () {
-        // opens the bat file for editing in notepad
-        var execStr = "start \"\" notepad {0}".format(RENDER_BAT_FILE.fsName.toString());
-        EDIT_BAT_FILE.open("w");
-        EDIT_BAT_FILE.write(execStr);
-        EDIT_BAT_FILE.execute();
-    }
-    
-    function runBatch () {
-        // executes the bat file
-        RENDER_BAT_FILE.execute();
-    }
-    
-    function startNewBatch () {
-        RENDER_BAT_FILE.open("w");
-        RENDER_BAT_FILE.close();
     }
     
     /*********************************************************************************************

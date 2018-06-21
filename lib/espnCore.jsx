@@ -10,10 +10,10 @@
  *
  * @module espnCore
  *
- * @version 1.0.3
+ * @version 1.0.4
  * @author mark.rohrer@espn.com
  * 
- * 12/11/2017
+ * 7/1/2018
  *
  */
 
