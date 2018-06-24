@@ -22,9 +22,9 @@ $.evalFile(new File($.fileName).parent.fsName.toString() + '/json2.js');
 var scriptRoot = new File($.fileName).parent.parent.parent.fsName;
 
 espnCore = {
-    'schema'       : [1.0, 1.0],
-    'version'      : [1,0,3],
-    'date'         : "12/15/2017",
+    'schema'       : [1.0, 1.1],
+    'version'      : [1,1,0],
+    'date'         : "7/15/2017",
     'platform'     : null,
     'dashboard'    : "0. Dashboard",
     'logs'         : scriptRoot + "/.logs/{0}",
@@ -44,6 +44,21 @@ STATUS = {
     'UNSAVED'    : 1002, // set during team changes, template builds, etc. soft warning state.
     'OK'         : 1003, // validation check passed -- ready to write to disk
     'OK_WARN'    : 1004, // validation check passed -- file already exists with that name
+};
+
+CODE = {
+    'missing_dashboard' : 'Could not find the dashboard in your scene. Run Build Template to repair it.',
+    'missing_template'  : 'Could not find one or more critical template pieces in your scene. Run Build Template to repair it.',
+    'missing_textlayers': 'Could not modify one or more text layers in your dashboard. Run Build Template to repair it',
+    'invalid_save_loc'  : 'This scene\'s save location is not valid.',
+    'invalid_scenedata' : 'There is a problem validating SceneData. Check your entries and try again. Status: {0}',
+    'failed_tagging'    : 'SceneData could not be pushed to the dashboard tag.',
+    'failed_eval'       : 'Could not eval the custom script assigned to this switching operation',
+    'failed_save'       : 'Your scene could not be saved! You may want to manually save a temporary backup to your local drive.',
+    'failed_backup'     : 'Could not save backup for this scene. Check the log for details.',
+    'failed_build'      : 'There was an error building part of your project template. Check the log for details.',
+    'failed_queue'      : 'There was a problem adding items to your render queue. Check the log for details.',
+    'failed_wipque'     : 'There was a problem building WIP comps to add to your queue. Check the log for details.'
 };
 
 /*************************************************************************************************
@@ -1119,7 +1134,23 @@ Array.prototype.indexOf = function (searchElement, fromIndex) {
       k++;
     }
     return -1;
+
 };
+
+function lookup ( obj, key ){
+    var result;
+    for (var k in obj) {
+        if (obj.hasOwnProperty(k)) {
+            if (k === key) {             
+                return obj[k][0];
+            } else if ( JSON.stringify( obj[k][2] ) !== JSON.stringify({}) ){
+                result = search( obj[k][2], key );
+                if (result) return result;
+            }
+        } else continue;
+    }
+    return null;
+} 
 
 String.prototype.format = function () {
     // Adds a .format() method to the String prototype, similar to python

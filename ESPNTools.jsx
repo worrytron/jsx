@@ -45,20 +45,7 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/aeTemplate.jsx');
     var INFO = 2;
 
     // Error messages for common issues
-    var errorMessages = {
-        'missing_dashboard' : 'Could not find the dashboard in your scene. Run Build Template to repair it.',
-        'missing_template'  : 'Could not find one or more critical template pieces in your scene. Run Build Template to repair it.',
-        'missing_textlayers': 'Could not modify one or more text layers in your dashboard. Run Build Template to repair it',
-        'invalid_save_loc'  : 'This scene\'s save location is not valid.',
-        'invalid_scenedata' : 'There is a problem validating SceneData. Check your entries and try again. Status: {0}',
-        'failed_tagging'    : 'SceneData could not be pushed to the dashboard tag.',
-        'failed_eval'       : 'Could not eval the custom script assigned to this switching operation',
-        'failed_save'       : 'Your scene could not be saved! You may want to manually save a temporary backup to your local drive.',
-        'failed_backup'     : 'Could not save backup for this scene. Check the log for details.',
-        'failed_build'      : 'There was an error building part of your project template. Check the log for details.',
-        'failed_queue'      : 'There was a problem adding items to your render queue. Check the log for details.',
-        'failed_wipque'     : 'There was a problem building WIP comps to add to your queue. Check the log for details.'
-    };
+
     
     /*********************************************************************************************
      * INITIALIZERS

@@ -14,10 +14,41 @@ if (link.linked < 1) {
 var RENDER_BAT_FILE = new File("~/aeRenderList.bat");
 var EDIT_BAT_FILE   = new File("~/editRenderList.bat");
 
+var Template = {
+    "dashboard" : ["0. Dashboard", "CompItem", {}],
+    "precomps_bin"  : ["1. TOOLKIT PRECOMPS", "FolderItem", {
+        "awaysheet" : ["Away Logosheet Master Switch", "CompItem", {}],
+        "teamsheet" : ["Team Logosheet Master Switch", "CompItem", {}],
+        "showsheet" : ["Show Logosheet Master Switch", "CompItem", {}]
+    }],
+    "working_bin" : ["2. WORKING FOLDER", "FolderItem", {}],
+    "render_bin"  : ["3. RENDER COMPS", "FolderItem", {}],
+    "tech_bin"    : ["X. DO NOT EDIT", "FolderItem", {
+        "assets_bin": ["Asset Bin", "FolderItem", {
+            "guides_bin" : ["Guidelayers", "FolderItem", {
+                "bottomline": ["Guidelayers", "CompItem", {}]
+            }],
+            "team0_bin" : ["Team Logo Sheets", "FolderItem", {}],
+            "team1_bin" : ["Away Logo Sheets", "FolderItem", {}],
+            "spon0_bin" : ["Sponsor Logo Sheets", "FolderItem", {}],
+            "show0_bin" : ["Show Logo Sheets", "FolderItem", {}],
+            "asset1_bin" : ["Custom Asset 01", "FolderItem", {}],
+            "asset2_bin" : ["Custom Asset 02", "FolderItem", {}],
+            "asset3_bin" : ["Custom Asset 03", "FolderItem", {}],
+            "asset4_bin" : ["Custom Asset 04", "FolderItem", {}],
+            "asset5_bin" : ["Custom Asset 05", "FolderItem", {}],
+            "script_bin" : ["Script Holders", "FolderItem", {
+                "awayScript" : ["Away Script", "CompItem", {}],
+                "teamScript" : ["Team Script", "CompItem", {}],
+                "showScript" : ["Show Script", "CompItem", {}],
+                "custScript" : ["Custom Text Script", "CompItem", {}]
+            }]
+        }],
+        "wiprenderbin": ["WIP Render Comps", "FolderItem", {}]
+    }]
+};
+
 function SceneLink (sceneData) {
-    if (!sceneData || !sceneData.STATUS_OK) {
-        return false;
-    }
     this.linked = -1;
     this.dashboard = null;
     this.bottomLine = null;
@@ -35,16 +66,16 @@ function SceneLink (sceneData) {
     };
 
     this.Link = function () {
-        this.dashboard = getItem(sceneData.templateLookup('dashboard'));
+        this.dashboard = getItem(lookup(Template,'dashboard'));
         if (isValid(dashboard)) {
-            this.bottomline    = getItem(sceneData.templateLookup('bottomline'));
-            this.homeLogosheet = getItem(sceneData.templateLookup('teamsheet'));
-            this.awayLogosheet = getItem(sceneData.templateLookup('awaysheet'));
-            this.showLogosheet = getItem(sceneData.templateLookup('showsheet'));
+            this.bottomline    = getItem(lookup(Template,'bottomline'));
+            this.homeLogosheet = getItem(lookup(Template,'teamsheet'));
+            this.awayLogosheet = getItem(lookup(Template,'awaysheet'));
+            this.showLogosheet = getItem(lookup(Template,'showsheet'));
             // template bins       
-            this.bottomlineBin = getItem(sceneData.templateLookup('guides_bin'), FolderItem);
-            this.precompsBin   = getItem(sceneData.templateLookup('precomps_bin'), FolderItem);
-            this.renderCompBin = getItem(sceneData.templateLookup('render_bin'), FolderItem);
+            this.bottomlineBin = getItem(lookup(Template,'guides_bin'), FolderItem);
+            this.precompsBin   = getItem(lookup(Template,'precomps_bin'), FolderItem);
+            this.renderCompBin = getItem(lookup(Template,'render_bin'), FolderItem);
         }
         return this.TestLink();
     };
@@ -77,9 +108,8 @@ function SceneLink (sceneData) {
      */
     this.BuildTemplate = function() {
         // Check for platform-specific JSON & load it if necessary
-        var templateData = this.sceneData.prod.getPlatformData()['Template'];
         // Build the bin/folder tree from JSON
-        buildTemplateFromJson( templateData );
+        buildTemplateFromJson( Template );
         
         this.Link();
         if (this.linked === 1) {
@@ -92,7 +122,7 @@ function SceneLink (sceneData) {
             this._populateCustomAssets();
             this._buildAllLogosheetPrecomps();
         } else {
-            this.sceneData.log.write(ERR, errorMessages['missing_template']);
+            this.sceneData.log.write(ERR, CODE['missing_template']);
         }
     }
     /*
@@ -148,7 +178,7 @@ function SceneLink (sceneData) {
             // after building the text layers, set the scale of the null
             pNull.transform.scale.setValue([scale,scale,scale]);
         } catch (e) {
-            this.sceneData.log.write(ERR, errorMessages['failed_build'], e);
+            this.sceneData.log.write(ERR, CODE['failed_build'], e);
         }        
     }
     /* TODO: COMMENTS
@@ -203,7 +233,7 @@ function SceneLink (sceneData) {
                     botline = botline.replace('Y:','/Volumes/cagenas');
                 botline = importFile(botline, this.bottomlineBin);
             } catch (e) {
-                this.sceneData.log.write(ERR, errorMessages['failed_build'], e);
+                this.sceneData.log.write(ERR, CODE['failed_build'], e);
             }
         }
         // Delete all the layers from the comp (?? i don't remember why this is here)
@@ -231,8 +261,8 @@ function SceneLink (sceneData) {
         // NULL productions cannot be built or repaired
         if (this.sceneData.prod.name === "NULL") return false;
         
-        var logosheetComp = getItem( this.sceneData.templateLookup('{0}sheet'.format(type)) );
-        var logosheetBin = getItem( this.sceneData.templateLookup('{0}{1}_bin'.format(type_, t)));
+        var logosheetComp = getItem( lookup(Template,'{0}sheet'.format(type)) );
+        var logosheetBin = getItem( lookup(Template,'{0}{1}_bin'.format(type_, t)));
 
         var asset; // avitem that represents the asset
         var lyr; // the layer of the asset
@@ -269,7 +299,7 @@ function SceneLink (sceneData) {
             lyr.collapseTransformation = true;
 
         } catch(e) {
-            this.sceneData.log.write(WARN, "loadShowAssets: " + errorMessages['failed_biuld'], e);
+            this.sceneData.log.write(WARN, "loadShowAssets: " + CODE['failed_biuld'], e);
         }
     }
     /*
@@ -282,7 +312,7 @@ function SceneLink (sceneData) {
         for (var i=1; i<=NUM_CUSTOM_ASSETS; i++) {
             try {
                 // lookup the name of the bin in the ae database
-                var customAssetBin = getItem( this.sceneData.templateLookup('asset{0}_bin'.format(i)), FolderItem );
+                var customAssetBin = getItem( lookup(Template,'asset{0}_bin'.format(i)), FolderItem );
                 if (!customAssetBin) continue;
                 // if it exists and is empty
                 if (customAssetBin.numItems === 0) {
@@ -294,7 +324,7 @@ function SceneLink (sceneData) {
                 }
             // Log any errors
             } catch(e) { 
-                this.sceneData.log.write(ERR, errorMessages['failed_build'], e);
+                this.sceneData.log.write(ERR, CODE['failed_build'], e);
             }
         }
     }
@@ -311,7 +341,7 @@ function SceneLink (sceneData) {
             buildComps( teamLayout, this.awayLogosheetComp, this.precompsBin, 'AWAY ' );
             buildComps( showLayout, this.showLogosheetComp, this.precompsBin );
         } catch(e) {
-            this.sceneData.log.write(WARN, errorMessages['failed_build'], e);
+            this.sceneData.log.write(WARN, CODE['failed_build'], e);
         }
     }
     /*
@@ -345,7 +375,7 @@ function SceneLink (sceneData) {
                 layer.scale.setValue(layout[c]["Scl"]);
                 layer.collapseTransformation = true;                    
             } catch(e) {
-                this.sceneData.log.write(WARN, errorMessages['missing_template'], e);
+                this.sceneData.log.write(WARN, CODE['missing_template'], e);
             }
         }
     }
@@ -356,7 +386,7 @@ function SceneLink (sceneData) {
      ********************************************************************************************/
     this.GetRenderComps = function () {
         if (!this.TestLink()){
-            this.sceneData.log.write(ERR, errorMessages['missing_template']);
+            this.sceneData.log.write(ERR, CODE['missing_template']);
         }
         // prep objects 
         var renderComps = [];
@@ -401,7 +431,7 @@ function SceneLink (sceneData) {
                 rqi.outputModules[1].file = new File (outputDir +'/'+ movName); 
             }            
         } catch(e) {
-            sceneData.log.write(ERR, errorMessages['failed_queue'], e);
+            sceneData.log.write(ERR, CODE['failed_queue'], e);
         }
     }
 
@@ -452,7 +482,7 @@ function SceneLink (sceneData) {
             sceneData.status === STATUS.CHECK_DEST || 
             sceneData.status === STATUS.UNDEFINED) {
             
-            sceneData.log.write(ERR, errorMessages['invalid_scenedata']);
+            sceneData.log.write(ERR, CODE['invalid_scenedata']);
             return false;
         }
         // STATUS.OK_WARN means that the save location is valid, but there's an existing file there.
@@ -470,13 +500,13 @@ function SceneLink (sceneData) {
             try {
                 app.project.save(aepFile);
             } catch (e) {
-                sceneData.log.write(ERR, errorMessages['failed_save'], e);
+                sceneData.log.write(ERR, CODE['failed_save'], e);
             }
             // make a copy of the file as a backup
             try {
                 aepFile.copy( sceneData.getFullPath()['backup'] );
              } catch (e) { 
-                sceneData.log.write(ERR, errorMessages['failed_backup'], e);
+                sceneData.log.write(ERR, CODE['failed_backup'], e);
             }/**/
             return true;
         } else return false;
@@ -507,7 +537,7 @@ function SceneLink (sceneData) {
         }
 
         var bin = '{0}{1}_bin'.format(type_, t);
-        bin = getItem( this.sceneData.templateLookup(bin), FolderItem );
+        bin = getItem( lookup(Template,bin), FolderItem );
         if (!bin.numItems === 0)
             err = 1;
 
@@ -522,7 +552,7 @@ function SceneLink (sceneData) {
             err = 1;
 
         if (err === 1) {
-            this.sceneData.log.write(ERR, errorMessages['missing_template']);
+            this.sceneData.log.write(ERR, CODE['missing_template']);
             return false;
         }
 
@@ -562,7 +592,7 @@ function SceneLink (sceneData) {
                     var data = this.sceneData.teams[t][layerData[l]].toUpperCase();
                     lyr.property('Text').property('Source Text').setValue(data);
                 } catch (e) {
-                    this.sceneData.log.write(WARN, errorMessages['missing_textlayers'], e);
+                    this.sceneData.log.write(WARN, CODE['missing_textlayers'], e);
                 }
             }
         // everything besides team text layers
@@ -572,7 +602,7 @@ function SceneLink (sceneData) {
                 var data = this.sceneData[type].name.toUpperCase();
                 lyr.property('Text').property('Source Text').setValue(data);
             } catch (e) {
-                this.sceneData.log.write(WARN, errorMessages['missing_textlayers'], e);
+                this.sceneData.log.write(WARN, CODE['missing_textlayers'], e);
             }
         }
     }
@@ -587,7 +617,7 @@ function SceneLink (sceneData) {
                 this.dashboard.layer('CUSTOM TEXT {0}'.format(cust[s])).property("Text").property("Source Text").setValue(this.sceneData["custom{0}".format(cust[s])]);
             }            
         } catch(e) {
-            this.sceneData.log.write(ERR, errorMessages['missing_textlayers'], e);
+            this.sceneData.log.write(ERR, CODE['missing_textlayers'], e);
         }
     }
     /*
@@ -601,7 +631,7 @@ function SceneLink (sceneData) {
             setDashboardLayer('SCENE_NAME', this.sceneData.name.toString());
             setDashboardLayer('VERSION', 'v' + zeroFill(this.sceneData.version.toString(), 3));
         } catch (e) {
-            tempScene.log.write(ERR, errorMessages['failed_tagging'], e);
+            tempScene.log.write(ERR, CODE['failed_tagging'], e);
             return false;
         }
         return true;
@@ -615,7 +645,7 @@ function SceneLink (sceneData) {
     this.SwitchCustomAssets = function (which) {
         for (var i=1; i<=NUM_CUSTOM_ASSETS; i++){
             // lookup the name of each custom asset bin
-            var assetTag = this.sceneData.templateLookup('asset{0}_bin'.format(i));
+            var assetTag = lookup(Template,'asset{0}_bin'.format(i));
             // if [which] is the first word in the folder name
             if (assetTag.toLowerCase().indexOf(which) === 0){
                 try {
@@ -640,7 +670,7 @@ function SceneLink (sceneData) {
                         id = this.sceneData.teams[1].id;
                     }
                 } catch(e) {
-                    this.sceneData.log.write(WARN, errorMessages['missing_template']);
+                    this.sceneData.log.write(WARN, CODE['missing_template']);
                 }
                 try {
                     // If everything is ready, now actually switch the asset using the custom asset folder, 
@@ -661,11 +691,11 @@ function SceneLink (sceneData) {
     this.EvalUserScripts = function (which) {
         if (!which) return false;
         // get the script holder comp for which
-        var comp = this.sceneData.templateLookup('{0}Script'.format(which));
+        var comp = lookup(Template,'{0}Script'.format(which));
         comp = getItem(comp);
         if (!comp) {
             // No big deal if it's missing, just log a warning
-            this.sceneData.log.write(WARN, errorMessages['missing_template']);
+            this.sceneData.log.write(WARN, CODE['missing_template']);
             return null;
         } else {
             try {
@@ -673,13 +703,15 @@ function SceneLink (sceneData) {
                 eval(comp.comment);
             } catch(e) {
                 // Error if the eval fails
-                this.sceneData.log.write(ERR, errorMessages['failed_eval'], e);
+                this.sceneData.log.write(ERR, CODE['failed_eval'], e);
             }
         }
     }
 
-    this.Init(sceneData);
-    return this;
+    if (sceneData && sceneData.STATUS_OK) {
+        this.Init(sceneData);
+    } return this;
+
 }
 
 

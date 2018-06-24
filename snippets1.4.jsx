@@ -8,13 +8,6 @@ function setDashboardLayer (dashboard, layer, value) {
 }
 
 
-
-
-
-
-
-
-
 XMPMeta.prototype.setDublinCoreData = function () {
     var xmp = this;
     xmp.appendArrayItem(XMPConst.NS_DC, "dc:publisher", "ESPN C&SD", 0, XMPConst.ARRAY_IS_ALTERNATIVE);
