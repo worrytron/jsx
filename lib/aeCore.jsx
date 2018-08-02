@@ -187,6 +187,25 @@ function buildTextLayer(text, comp, pos, font, fontSize, tracking, name, locked)
     return text_layer;
 }
 
+function createOutputModule(om_source, module_name)
+{
+    om_template = app.project.importFile(om_source);
+    temp_RQitem = app.project.renderQueue.item(app.project.renderQueue.numItems);
+    temp_RQitem.outputModules[1].saveAsTemplate(module_name);
+    om_template.remove();
+}
+
+// Sets an output module template on all render queue items
+function setOutputModule(module_name)
+{
+    RQitems = app.project.renderQueue.items;
+    for (i=1; i<=RQitems.length; i++)
+    {
+        RQitem = RQitems[i];
+        RQitem.outputModules[1].applyTemplate(module_name);
+    }
+}
+
 /*************************************************************************************************
  * AUTO-TRACE BACKEND FUNCTIONS
  ************************************************************************************************/

@@ -1139,6 +1139,11 @@ String.prototype.toComment = function (){
     converted = converted + arr[i];
   } return converted;
 };
+
+String.prototype.replaceAll = function(search, replacement) {
+    var target = this;
+    return target.replace(new RegExp(search, 'g'), replacement);
+};
 /*
 String.prototype.fromComment = function (){
   var converted = this;
