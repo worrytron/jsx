@@ -775,6 +775,7 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/aeTemplate.jsx');
             dlg.grp.tabs.setup.versionText.text = versionStr;
             
             // Setup Tab
+            /*
             dlg.grp.tabs.setup.build.createTemplate.onClick       = buildProjectTemplate;
             dlg.grp.tabs.setup.build.createOfflineTemplate.onClick= buildOfflineProjectTemplate;
             dlg.grp.tabs.setup.createProject.onClick        = saveWithBackup;
@@ -833,6 +834,7 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/aeTemplate.jsx');
                 catch(e) { alert(e.message); }
             };
             dlg.grp.tabs.tdtools.pickleSheet.onClick = pickleLogoSheet;
+            */
         }
         return dlg;
 	}
