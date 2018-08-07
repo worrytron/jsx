@@ -60,4 +60,88 @@ $.writeln(xmp.serialize());
         var wipRenderGuides = getItem(liveScene.templateLookup("bottomline"));
 
 
+/**
+  * This function searches the platform project template data recursively, looking for the
+  * requested key. When found, it presents the child JSON data of that key. This is useful
+  * for nested JSON objects of unknown depth -- such as in a project heirarchy.
+  * ex: scene.templateLookup('dashboard') --> ["0. Dashboard", CompItem, {?JSONDATA}]
+  * @param {(string|number)} lookup - The key to search for (it's assumed to be unique)
+  * @returns {Object} The child data of the requested key (if found, otherwise undefined)
+  */
+function lookup ( obj, lookup ) {
+    function search ( obj, key ){
+        var result;
+        for (var k in obj) {
+            if (obj.hasOwnProperty(k)) {
+                if (k === key) {             
+                    return obj[k][0];
+                } else if ( JSON.stringify( obj[k][2] ) !== JSON.stringify({}) ){
+                    result = search( obj[k][2], key );
+                    if (result) return result;
+                }
+            } else continue;
+        }
+    } 
+    return search(obj, lookup);
+}
+
+///// LAYER 0 ////////////////////////////////////
+var scene = new PipelineScene();
+
+// new/repair scene
+if (scene.linked != 1)
+    scene.Setup();
+
+// if regular scene
+if (scene.linked == 1){
+    // do the business
+    scene.SwitchTeam(0, "CFB", "ALA");
+    scene.SwitchShow(0, "CFB", "PRIMETIME");
+    scene.SwitchCustom(0, "New CustomA");
+    scene.SwitchCustom(2, "New CustomC");
+    scene.QueueRender();
+    scene.Save();
+
+}
+
+///// LAYER 1 ////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

@@ -1,20 +1,10 @@
-/*
-
-var link = new SceneLink(liveScene);
-link.Init();
-
-if (link.linked < 1) {
-    #scene has not linked properly
-}
-
-*/
 #target aftereffects
 
 // Locations for render .bat files
 var RENDER_BAT_FILE = new File("~/aeRenderList.bat");
 var EDIT_BAT_FILE   = new File("~/editRenderList.bat");
 
-var Template = {
+var template = {
     "dashboard" : ["0. Dashboard", "CompItem", {}],
     "precomps_bin"  : ["1. TOOLKIT PRECOMPS", "FolderItem", {
         "awaysheet" : ["Away Logosheet Master Switch", "CompItem", {}],
@@ -46,56 +36,91 @@ var Template = {
         }],
         "wiprenderbin": ["WIP Render Comps", "FolderItem", {}]
     }]
-};
+}
 
-function SceneLink (sceneData) {
-    this.linked = -1;
-    this.dashboard = null;
-    this.bottomLine = null;
-    this.homeLogosheet = null;
+function PipelineScene() {
+    // attach logging function
+    this.log = new Log('ae');
+    // forward declarations
     this.awayLogosheet = null;
+    this.teamLogosheet = null;
     this.showLogosheet = null;
-    this.bottomlineBin = null;
-    this.precompsBin = null;
-    this.customAssetBin = null;
-    this.renderCompBin = null;
+    this.awayScript = null;   
+    this.teamScript = null;   
+    this.showScript = null;   
+    this.custScript = null;   
+    this.bottomline = null;   
+    this.renderBin = null;    
+    this.wipRenderBin = null; 
 
-    this.Init = function (sceneData) {
-        this.sceneData = sceneData;
-        this.linked = this.Link();
+    // initialization tree
+    this.Init = function() {
+        this.Link();
+        if (this.linked == 1)
+            this.GetMetadata();
     };
 
+    // probe scene for template objects
     this.Link = function () {
-        this.dashboard = getItem(lookup(Template,'dashboard'));
-        if (isValid(dashboard)) {
-            this.bottomline    = getItem(lookup(Template,'bottomline'));
-            this.homeLogosheet = getItem(lookup(Template,'teamsheet'));
-            this.awayLogosheet = getItem(lookup(Template,'awaysheet'));
-            this.showLogosheet = getItem(lookup(Template,'showsheet'));
-            // template bins       
-            this.bottomlineBin = getItem(lookup(Template,'guides_bin'), FolderItem);
-            this.precompsBin   = getItem(lookup(Template,'precomps_bin'), FolderItem);
-            this.renderCompBin = getItem(lookup(Template,'render_bin'), FolderItem);
+        this.linked = -1;
+        this.dashboard = getItem("0. Dashboard");
+        if (isValid(this.dashboard)){
+            // check for rest of template objects
+            this.awayLogosheet  = getItem(lookup(template, "awaysheet"));
+            this.teamLogosheet  = getItem(lookup(template, "teamsheet"));
+            this.showLogosheet  = getItem(lookup(template, "showsheet"));
+            this.awayScript     = getItem(lookup(template, "awayScript"));
+            this.teamScript     = getItem(lookup(template, "teamScript"));
+            this.showScript     = getItem(lookup(template, "showScript"));
+            this.custScript     = getItem(lookup(template, "custScript"));
+            this.bottomline     = getItem(lookup(template, "bottomline"));
+            this.renderBin      = getItem(lookup(template, "render_bin"), FolderItem);
+            this.wipRenderBin   = getItem(lookup(template, "wiprenderbin"), FolderItem);            
+            this.TestLink();
         }
-        return this.TestLink();
     };
 
+    // set linked flag
     this.TestLink = function () {
-        var linked = -1;
+        var msg = "A piece of the template was missing: {0}. You may need to repair it.";
+        if (!isValid(this.awayLogosheet)) {
+            this.log.write(1, msg.format('Away Logosheet'));
+            this.linked = 0;
+        } if (!isValid(this.teamLogosheet)) {
+            this.log.write(1, msg.format('Home Logosheet'));
+            this.linked = 0;
+        } if (!isValid(this.showLogosheet)) {
+            this.log.write(1, msg.format('Show Logosheet'));
+            this.linked = 0;
+        } if (!isValid(this.awayScript))    {
+            this.log.write(1, msg.format('Away Script Holder'));
+            this.linked = 0;
+        } if (!isValid(this.teamScript))    {
+            this.log.write(1, msg.format('Home Script Holder'));
+            this.linked = 0;
+        } if (!isValid(this.showScript))    {
+            this.log.write(1, msg.format('Show Script Holder'));
+            this.linked = 0;
+        } if (!isValid(this.custScript))    {
+            this.log.write(1, msg.format('Custom Script Holder'));
+            this.linked = 0;
+        } if (!isValid(this.bottomline))    {
+            this.log.write(1, msg.format('Bottomline Template'));
+            this.linked = 0;
+        } if (!isValid(this.renderBin))     {
+            this.log.write(1, msg.format('Render Comps Bin'));
+            this.linked = 0;
+        } if (!isValid(this.wipRenderBin))  {
+            this.log.write(1, msg.format('WIP Render Comps Bin'));
+            this.linked = 0;
+        } if (this.linked === -1){
+            this.linked = 1;
+        }
+    };
 
-        if (!isValid(this.dashboard))     return linked;
-        if (!isValid(this.bottomline))    this.linked = 0;
-        if (!isValid(this.homeLogosheet)) this.linked = 0;
-        if (!isValid(this.awayLogosheet)) this.linked = 0;
-        if (!isValid(this.showLogosheet)) this.linked = 0;
-        if (!isValid(this.bottomlineBin)) this.linked = 0;
-        if (!isValid(this.precompsBin))   this.linked = 0;
-        if (!isValid(this.renderCompBin)) this.linked = 0;
-
-        if (linked === -1) {
-            linked = 1;
-        } return linked;
-    }
+    this.GetMetadata = function() {
+        var metadata = null;
+    };
 
     /*********************************************************************************************
     TEMPLATE BUILDERS
@@ -109,9 +134,10 @@ function SceneLink (sceneData) {
     this.BuildTemplate = function() {
         // Check for platform-specific JSON & load it if necessary
         // Build the bin/folder tree from JSON
-        buildTemplateFromJson( Template );
+        buildTemplateFromJson( template );
         
         this.Link();
+        /*
         if (this.linked === 1) {
             this._populateDashboard();           // build dashboard text layers
             this._populateGuidelayer();          // assemble bottomline template
@@ -124,6 +150,7 @@ function SceneLink (sceneData) {
         } else {
             this.sceneData.log.write(ERR, CODE['missing_template']);
         }
+        */
     }
     /*
      * This builds and sets up the dashboard comp for the project. This is mostly text layers
@@ -708,10 +735,7 @@ function SceneLink (sceneData) {
         }
     }
 
-    if (sceneData && sceneData.STATUS_OK) {
-        this.Init(sceneData);
-    } return this;
-
+    this.Init();
 }
 
 

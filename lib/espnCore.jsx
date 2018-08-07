@@ -244,76 +244,7 @@ function ProductionData ( id ) {
     /* Construction command -- load the production associated with the passed id key */
     this.load(id);
 }
-/**
- * TeamData is an object with built-in functions to load & validate team data from JSON
- * @constructor
- * @param {[String|ProductionData]} prodData - a Production id or ProductionData object
- * @param {string} id - A team's JSON key. Varies by production -- typically tricode.
- */
-function TeamData ( prodData, id ) {
-    (id === null) ? id = 'NULL' : null;
-    // TeamData requires ProductionData because the ProductionData object stores the location
-    // of the team database.
-    // If a string is passed instead of ProductionData, turn it into ProductionData
-    if (!prodData instanceof ProductionData){
-        prodData = new ProductionData(prodData);
-    }
-    // ProductionData stores a copy of the entire teams.json (as an object member called 
-    // ProductionData.teams). If that database hasn't been loaded yet, it gets loaded here.
-    if (!prodData.teamdata) prodData.loadTeamData();
 
-    // Use the copy of teams.json stored in ProductionData.teams to populate this object with
-    // a specific team's information.
-    this.id         = id;
-    this.name       = id;
-    this.dispName   = prodData.teams[id]['DISPLAY NAME'];
-    this.nickname   = prodData.teams[id]['NICKNAME'];
-    this.location   = prodData.teams[id]['LOCATION'];
-    this.tricode    = prodData.teams[id]['TRI'];
-    this.conference = prodData.teams[id]['CONFERENCE'];
-    this.imsName    = prodData.teams[id]['IMS'];
-    this.tier       = prodData.teams[id]['TIER'];
-    this.primary    = "0x{0}".format(prodData.teams[id]['PRIMARY']);
-    this.secondary  = "0x{0}".format(prodData.teams[id]['SECONDARY']);
-}
-/**
- * ShowData is an object with built-in functions to load & validate show data from JSON
- * @constructor
- * @param {[String|ProductionData]} prodData - a Production id or ProductionData object
- * @param {string} id - A show's JSON key. Varies by production -- typically tricode.
- */
-function ShowData ( prodData, id ) {
-    (id === null) ? id = 'NULL' : null;
-    
-    if (!prodData instanceof ProductionData){
-        prodData = new ProductionData(prodData);
-    }
-    
-    if (!prodData.showdata) prodData.loadShowData();
-    
-    this.id      = id;
-    this.tricode = prodData.shows[id]["TRI"];
-    this.name    = prodData.shows[id]["NAME"];
-}
-/**
- * SponsorData is an object with built-in functions to load & validate sponsor data from JSON
- * @constructor
- * @param {[String|ProductionData]} prodData - a Production id or ProductionData object
- * @param {string} id - A sponsor's JSON key. Varies by production -- typically a name.
- */
-function SponsorData ( prodData, id ){
-    (id === null) ? id = 'NULL' : null;
-    
-    if (!prodData instanceof ProductionData) {
-        prodData = new ProductionData(prodData);
-    }
-    
-    if (!prodData.sponsordata) prodData.loadSponsorData();
-    
-    this.id      = id;
-    this.tricode = prodData.sponsors[id]["TRI"];
-    this.name    = prodData.sponsors[id]["NAME"];
-}
 
 /*************************************************************************************************
  * PLATFORM INTEGRATION VIRTUAL OBJECTS
@@ -330,14 +261,7 @@ illegalCharacters = /[.,`~!@#$%^&*()=+\[\]]/;
  * @param {string} plat_id - The id of the platform to which the scene belongs
  */
 
-function SceneData ( prodData, plat_id ) {
-    // Production global variables 
-    if (prodData instanceof ProductionData){
-        this.prod = prodData;
-    } else {
-        this.prod = new ProductionData( prodData );
-    }
-    this.prod.loadPlatformData(plat_id);
+function SceneLink ( plat_id ) {
     this.platform = plat_id;
     
     // Attach logging function
@@ -369,37 +293,9 @@ function SceneData ( prodData, plat_id ) {
     this.use_customC = false;
     this.use_customD = false;
     
-    // Versioning/production-context attributes
-    // Init teamdata
-    this.teams = new Array();
-    this.teams[0] = new TeamData(this.prod, 'NULL');
-    this.teams[1] = new TeamData(this.prod, 'NULL');
-    // Init showdata
-    this.show = new ShowData(this.prod, 'NULL');
-    // Init sponsordata
-    this.sponsor = new SponsorData(this.prod, 'NULL');
-
     // Set scene status to initialized state
     this.status = STATUS.UNDEFINED;
-    
-    /*
-     * This method sets the attached ProductionData object based on the passed production id
-     * and sets status flags indicating that the SceneData needs to be verified.
-     * @param {string} prod - A production id key
-     */
-    this.setProduction = function ( prod ){
-        if (this.prod.name !== prod){
-            this.prod.load( prod );
-            this.prod.loadPlatformData(this.platform);
-            this.prod.loadTeamData();
-            this.prod.loadShowData();
-            this.version = 0;
-        }
-        if (!this.prod.is_live)
-            this.status = STATUS.NO_DEST;
-        else
-            this.status = STATUS.CHECK_DEST;
-    };
+
     /*
      * This method sets the project name on the SceneData object and sets a status flag
      * indicating that the SceneData needs to be verified.
@@ -430,42 +326,7 @@ function SceneData ( prodData, plat_id ) {
         }
         this.status = STATUS.CHECK_DEST;
     };
-    /*
-     * This method will load a new TeamData object into the SceneData.teams array at the
-     * passed index location. (By convention, 0 is the home team and 1 is the away team.)
-     * @param {number} loc - The index of the team to be changed
-     * @param {string} teamid - The id of the team to be loaded
-     */
-    this.setTeam = function ( loc, teamid ) {
-        var team = new TeamData( this.prod, teamid );
-        if (team !== undefined){
-            this.teams[loc] = team;
-        }
-        if (this.status >= STATUS.UNSAVED)
-            this.status = STATUS.UNSAVED;
-    };
-    /*
-     * This method will set the current showid attached to the SceneData object.
-     * @param {string} showid - A show id string
-     */
-    this.setShow = function ( showid ) {
-        if (showid !== undefined){
-            this.show = new ShowData( this.prod, showid );
-        }
-        if (this.status >= STATUS.UNSAVED)
-            this.status = STATUS.UNSAVED;
-    };
-    /*
-     * This method will set the current sponsorid attached to the SceneData object.
-     * @param {string} sponsorid - A sponsor id string
-     */
-    this.setSponsor = function ( sponsorid ) {
-        if (sponsorid !== undefined){
-            this.sponsor = new SponsorData( this.prod, sponsorid );
-        } 
-        if (this.status >= STATUS.UNSAVED)
-            this.status = STATUS.UNSAVED;
-    };
+
     /*
      * This method will recursively search the backup folder of the current SceneData
      * object and determine the next available increment. This increment (number) becomes
@@ -706,16 +567,6 @@ function SceneData ( prodData, plat_id ) {
       * for the requested key.
       */
     this.getFolder = function ( lookup ) {
-        (lookup === undefined) ? lookup = '{0}_project' : null;
-        
-        if ($.os.indexOf('Windows') > -1)
-            var root = this.prod.root;
-        else if ($.os.indexOf('Macintosh') > -1)
-            var root = this.prod.root.replace('Y:', '/Volumes/cagenas')
-            
-        var fold = this.prod.folders[lookup.format(this.platform)];
-        
-        return (root + fold).format(this.project);
     };
     /**
       * This function searches the platform project template data recursively, looking for the
@@ -748,7 +599,7 @@ function SceneData ( prodData, plat_id ) {
       * @param {String} tagString - A single-line metadata tag
       * @returns {Int} A status flag (see STATUS object)
       */
-    this.prevalidate = function () {
+    this.checkLink = function () {
         // Check all critical naming attributes for bad data -- if any is found, the scene
         // is invalid (UNDEFINED)
         if (this.plat === "NULL" || this.plat === "" || this.plat === null){
@@ -789,10 +640,6 @@ function SceneData ( prodData, plat_id ) {
             this.setVersion();
         }
     };
-    /** This is a placeholder for the eventuality that Adobe will realize file save verification
-      * is a fairly important feature.
-      */
-    this.postvalidate = function () {};
     
     this.dump = function () {
         var outstr = "";
