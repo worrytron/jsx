@@ -136,21 +136,18 @@ function PipelineScene() {
         // Build the bin/folder tree from JSON
         buildTemplateFromJson( template );
         
-        this.Link();
-        /*
+        this.Link(); // reattach scene links after building the template
+
         if (this.linked === 1) {
             this._populateDashboard();           // build dashboard text layers
             this._populateGuidelayer();          // assemble bottomline template
-            this._populateLogosheetComp('team'); // import team logosheets
-            this._populateLogosheetComp('away'); // away sheets
-            this._populateLogosheetComp('show'); // show sheets
+            //this._populateLogosheetComp('team'); // import team logosheets
+            //this._populateLogosheetComp('away'); // away sheets
+            //this._populateLogosheetComp('show'); // show sheets
             //this._populateLogosheetComp('sponsor');
-            this._populateCustomAssets();
-            this._buildAllLogosheetPrecomps();
-        } else {
-            this.sceneData.log.write(ERR, CODE['missing_template']);
+            //this._populateCustomAssets();
+            //this._buildAllLogosheetPrecomps();
         }
-        */
     }
     /*
      * This builds and sets up the dashboard comp for the project. This is mostly text layers
@@ -161,10 +158,10 @@ function PipelineScene() {
         // Text layer names for versioning
         var textLayers = [
             "SHOW NAME",
-            "TEAM NAME",
-            "NICKNAME",
-            "LOCATION",
-            "TRICODE",
+            "HOME TEAM NAME",
+            "HOME NICKNAME",
+            "HOME LOCATION",
+            "HOME TRICODE",
             "AWAY TEAM NAME",
             "AWAY NICKNAME",
             "AWAY LOCATION",
@@ -205,7 +202,7 @@ function PipelineScene() {
             // after building the text layers, set the scale of the null
             pNull.transform.scale.setValue([scale,scale,scale]);
         } catch (e) {
-            this.sceneData.log.write(ERR, CODE['failed_build'], e);
+            this.log.write(ERR, CODE['failed_build'], e);
         }        
     }
     /* TODO: COMMENTS
@@ -218,21 +215,20 @@ function PipelineScene() {
         var fontSizeBig = 90;
         var fontSizeSm = 33;
 
-        if (!labelLayer)
+        if (!labelLayer) // if the label layer doesn't exist, build it
             labelLayer = buildTextLayer(layerName, this.dashboard, pos, font, fontSizeSm, 0, (layerName + ' Label'), false);
-        else {
+        else { // otherwise make sure it's in the right position
             labelLayer.locked = false;
             labelLayer.transform.position.setValue(posSm);
         }
 
-        if (!textLayer)
+        if (!textLayer) // if the text layer doesn't exist, build it
             textLayer = buildTextLayer(layerName, this.dashboard, pos+[0,70,0], font, fontSizeBig, 0, layerName, false);
-        else {
+        else { // otherwise make sure it's in the right position
             textLayer.locked = false;
             textLayer.transform.position.setValue(posBig);
         }
         // TODO: Fix the bug here where the scale doesn't reset to 100%
-
         // parent the text layers to the scaling null
         labelLayer.parent = pNull;
         labelLayer.locked = true;
@@ -243,7 +239,7 @@ function PipelineScene() {
     }
     /*
      * Build the precomp used for the guide layer in WIP renders. Includes the bottom line
-     * and a project name / version / timecode burn-in at the bottom of the screen.
+     * aend a project name / version / timecode burn-in at the bottom of the screen.
      */
     this._populateGuidelayer = function () {
         // Text layer settings
@@ -260,7 +256,7 @@ function PipelineScene() {
                     botline = botline.replace('Y:','/Volumes/cagenas');
                 botline = importFile(botline, this.bottomlineBin);
             } catch (e) {
-                this.sceneData.log.write(ERR, CODE['failed_build'], e);
+                this.log.write(1, 'Bottomline guide not loaded.', e);
             }
         }
         // Delete all the layers from the comp (?? i don't remember why this is here)
@@ -268,8 +264,7 @@ function PipelineScene() {
             try { 
                 this.bottomline.layer(1).locked = false;
                 this.bottomline.layer(1).remove();
-            }
-            catch(e) { break; }
+            } catch(e) { break; }
         }
         // add the bottomline
         var blLayer = this.bottomline.layers.add(botline);
@@ -326,7 +321,7 @@ function PipelineScene() {
             lyr.collapseTransformation = true;
 
         } catch(e) {
-            this.sceneData.log.write(WARN, "loadShowAssets: " + CODE['failed_biuld'], e);
+            this.log.write(WARN, "loadShowAssets: " + CODE['failed_biuld'], e);
         }
     }
     /*
@@ -339,7 +334,7 @@ function PipelineScene() {
         for (var i=1; i<=NUM_CUSTOM_ASSETS; i++) {
             try {
                 // lookup the name of the bin in the ae database
-                var customAssetBin = getItem( lookup(Template,'asset{0}_bin'.format(i)), FolderItem );
+                var customAssetBin = getItem( lookup(template,'asset{0}_bin'.format(i)), FolderItem );
                 if (!customAssetBin) continue;
                 // if it exists and is empty
                 if (customAssetBin.numItems === 0) {
@@ -351,7 +346,7 @@ function PipelineScene() {
                 }
             // Log any errors
             } catch(e) { 
-                this.sceneData.log.write(ERR, CODE['failed_build'], e);
+                this.log.write(ERR, CODE['failed_build'], e);
             }
         }
     }
@@ -644,7 +639,7 @@ function PipelineScene() {
                 this.dashboard.layer('CUSTOM TEXT {0}'.format(cust[s])).property("Text").property("Source Text").setValue(this.sceneData["custom{0}".format(cust[s])]);
             }            
         } catch(e) {
-            this.sceneData.log.write(ERR, CODE['missing_textlayers'], e);
+            this.log.write(0, CODE['missing_textlayers'], e);
         }
     }
     /*
