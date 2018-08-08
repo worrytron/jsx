@@ -380,7 +380,24 @@ Array.prototype.indexOf = function (searchElement, fromIndex) {
 
 };
 
-function lookup ( obj, key ){
+function lookup ( obj, lookup ) {
+    function search ( obj, key ){
+        var result;
+        for (var k in obj) {
+            if (obj.hasOwnProperty(k)) {
+                if (k === key) {             
+                    return obj[k][0];
+                } else if ( JSON.stringify( obj[k][2] ) !== JSON.stringify({}) ){
+                    result = search( obj[k][2], key );
+                    if (result) return result;
+                }
+            } else continue;
+        }
+    } 
+    return search(obj, lookup);
+}
+
+function lookup2 ( obj, key ){
     var result;
     for (var k in obj) {
         if (obj.hasOwnProperty(k)) {

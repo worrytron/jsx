@@ -1,5 +1,8 @@
 #target aftereffects
 
+$.evalFile(((new File($.fileName)).parent).toString() + '/espnCore.jsx');
+$.evalFile(((new File($.fileName)).parent).toString() + '/aeCore.jsx');
+
 // Locations for render .bat files
 var RENDER_BAT_FILE = new File("~/aeRenderList.bat");
 var EDIT_BAT_FILE   = new File("~/editRenderList.bat");
@@ -140,7 +143,7 @@ function PipelineScene() {
 
         if (this.linked === 1) {
             this._populateDashboard();           // build dashboard text layers
-            this._populateGuidelayer();          // assemble bottomline template
+            //this._populateGuidelayer();          // assemble bottomline template
             //this._populateLogosheetComp('team'); // import team logosheets
             //this._populateLogosheetComp('away'); // away sheets
             //this._populateLogosheetComp('show'); // show sheets
@@ -172,15 +175,15 @@ function PipelineScene() {
             "CUSTOM TEXT D"
         ];
 
-        try {
+        //try {
             // Build a null used for scaling
             var pNull = this.dashboard.layer('Scaler Null');
             if (!pNull) {
                 pNull = this.dashboard.layers.addNull();
                 pNull.name = 'Scaler Null';
-                pNull.transform.position.setValue([68,60,0]);
             }
             // Reset the null to 100%
+            pNull.transform.position.setValue([0,0,0]);
             pNull.transform.scale.setValue([100,100,100]);
             // Calculate the new scale based on # of text layers
             var scale = (840 / (textLayers.length * 115)) * 100;
@@ -192,22 +195,23 @@ function PipelineScene() {
 
             // build text layers based on the list above
             var ypi = 120;
-            var pos = [65,80,0];
+            var pos = [0,0,0];
             for (var tl in textLayers){
                 if (!textLayers.hasOwnProperty(tl)) continue;
-                this._createDashboardTextLayer(textLayers[tl], pNull, pos);
+                this._createDashboardTextLayer(textLayers[tl], pNull, pos, pNull);
                 // change the Y value for the next time around the loop
                 pos[1] += ypi;
             }
             // after building the text layers, set the scale of the null
             pNull.transform.scale.setValue([scale,scale,scale]);
-        } catch (e) {
-            this.log.write(ERR, CODE['failed_build'], e);
-        }        
+            pNull.transform.position.setValue([65,80,0]);
+        //} catch (e) {
+        //    this.log.write(0, "There was a problem building dashboard text layers.", e);
+        //}        
     }
     /* TODO: COMMENTS
     */
-    this._createDashboardTextLayer = function (layerName, parent, pos) {
+    this._createDashboardTextLayer = function (layerName, parent, pos, pNull) {
         var labelLayer = this.dashboard.layer(layerName + ' Label');
         var textLayer = this.dashboard.layer(layerName);
         // Font settings
@@ -219,14 +223,14 @@ function PipelineScene() {
             labelLayer = buildTextLayer(layerName, this.dashboard, pos, font, fontSizeSm, 0, (layerName + ' Label'), false);
         else { // otherwise make sure it's in the right position
             labelLayer.locked = false;
-            labelLayer.transform.position.setValue(posSm);
+            labelLayer.transform.position.setValue(pos);
         }
 
         if (!textLayer) // if the text layer doesn't exist, build it
             textLayer = buildTextLayer(layerName, this.dashboard, pos+[0,70,0], font, fontSizeBig, 0, layerName, false);
         else { // otherwise make sure it's in the right position
             textLayer.locked = false;
-            textLayer.transform.position.setValue(posBig);
+            textLayer.transform.position.setValue(pos+[0,70,0]);
         }
         // TODO: Fix the bug here where the scale doesn't reset to 100%
         // parent the text layers to the scaling null
