@@ -143,7 +143,7 @@ function PipelineScene() {
 
         if (this.linked === 1) {
             this._populateDashboard();           // build dashboard text layers
-            //this._populateGuidelayer();          // assemble bottomline template
+            this._populateGuidelayer();          // assemble bottomline template
             //this._populateLogosheetComp('team'); // import team logosheets
             //this._populateLogosheetComp('away'); // away sheets
             //this._populateLogosheetComp('show'); // show sheets
@@ -251,14 +251,15 @@ function PipelineScene() {
         var fontSize = 67;
         var tcPos = [1651, 1071];
         // Get the reqired objects from the project bin
-        var botline = getItem('Bottomline.tga', FootageItem);
+        var botline = getItem('ESPN_Bottomline_2018_Keyable_1920x1080.tga', FootageItem);
         // Load the bottomline.tga into the project if needed
         if (!botline) {
             try {
-                var botline = getGlobalAssets()['bottomline'];
+                var botline = "Y:/Workspace/DESIGN_RESOURCES/Bottomline/keyable_BtmLn_reference_examples/ESPN_Bottomline_2018_Keyable_1920x1080.tga";
                 if ($.os.indexOf('Macintosh') > -1) 
                     botline = botline.replace('Y:','/Volumes/cagenas');
-                botline = importFile(botline, this.bottomlineBin);
+                botline = new File(botline);
+                botline = importFile(botline, getItem("Guidelayers", FolderItem));
             } catch (e) {
                 this.log.write(1, 'Bottomline guide not loaded.', e);
             }
