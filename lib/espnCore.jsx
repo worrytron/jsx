@@ -14,7 +14,7 @@
 $.evalFile(new File($.fileName).parent.fsName.toString() + '/json2.js');
 
 var scriptRoot = new File($.fileName).parent.parent.parent.fsName;
-
+/*
 espnCore = {
     'version'      : 1.1,
     'schema'       : 1.1,
@@ -23,11 +23,23 @@ espnCore = {
     'logPath'      : scriptRoot + "/.logs/{0}",
     'prodJson'     : scriptRoot + "/.json/{0}/{1}.json",
     'globJson'     : scriptRoot + "/.json/{0}.json"
+};*/
+
+espnCore = {
+    'version'  : 1.1,
+    'schema'   : 1.1,
+    'revision' : 0,
+    'date'     : "7/15/2017",
+    'logPath'  : "/v/temp/logs/{0}",
+    'prodJson' : "/v/dev/ESPNTools/json/{0}/{1}.json",
+    'globJson' : "/v/dev/ESPNTools/json/{0}.json"
 };
 
-function CheckSchema (v) {
+
+function CheckSchema (data) {
     var log = new Log();
     var chk = true;
+    var v = data["ESPN_META_CAGE"]["schema"];
     if (v == undefined) {
         log.write(1, "Invalid JSON data passed to CheckSchema()")
         chk = false;
@@ -40,7 +52,10 @@ function CheckSchema (v) {
 }
 
 function OsPath (str) {
-    return str.replace('Y:', '/Volumes/cagenas');
+    if ($.os.indexOf('Macintosh') > -1) {
+        str = str.replace('Y:', '/Volumes/cagenas');
+    }
+    return str;
 }
 
 /*************************************************************************************************
@@ -57,36 +72,43 @@ function OsPath (str) {
  * @param {string} id - the database key for the production. If undefined, will instance a
  * null ProductionData object.
  */
-function Production (id) {
+
+ // FIGURE THIS OUT
+
+function ValidateJson (lookup_id, json_address) {
     var log = new Log();
-    var prodData = {'NULL': null};
-    var prodDbPath = espnCore['globJson'].format('productions');
-    try {
-        var prodDb = getJson( prodDbPath );
-
-    } catch(e) {
-        log.write(0, "There was a problem loading the sports/production database.", e);
-    }
-
-    if (CheckSchema(prodDb.schema)) {
-        try {
-            prodData = prodDb[id];
-        } catch(e) {
-            log.write(1, 'Requested production id not found. The default production was loaded.')
-            prodData = prodDb['NULL'];
+    var data = {'INVALID': null};
+    var jsonPath = espnCore[json_address[0]].format(json_address[1], json_address[2]);
+    var jsonRaw  = getJson( jsonPath );
+    if (jsonRaw === undefined){
+        log.write(0, "There was a problem loading the JSON data: {0}".format(json_address.toString()));
+    } else if (CheckSchema(jsonRaw)) {
+        data = jsonRaw[lookup_id];
+        if (data === undefined) {
+            log.write(1, "Requested id not found in the database. ({0}) -- Default data loaded.".format(lookup_id));
+            data = jsonRaw['NULL'];
         }
-        var prodSubfolders = prodData.folders;
-        for (var subf in prodSubfolders) {
-            if (!prodDbSubfolders.hasOwnProperty(subf)) continue;
-            prodSubfolders[subf] = OsPath(prodData['root']) + prodSubfolders[subf];
-        }
-    
-    }
+    } return data;
 }
 
-function SportData (id) {
+function ProductionFolders (id) {
     var log = new Log();
+    var address = ["globJson", "productions", null];
+    var prodData = ValidateJson(id, address);
 
+    var prodSubfolders = prodData.folders;
+    for (var subf in prodSubfolders) {
+        if (!prodSubfolders.hasOwnProperty(subf)) continue;
+        prodSubfolders[subf] = OsPath(prodData['root']) + prodSubfolders[subf];
+    }
+    prodData.folders = prodSubfolders;
+
+    return prodData.folders;
+}
+
+function TeamData (id) {
+    var log = new Log();
+    var address = ["prodJson", "teams"];
 }
 
 illegalCharacters = /[.,`~!@#$%^&*()=+\[\]]/;
@@ -111,7 +133,7 @@ function Log () {
     else userid = "OSXUSER";
     // logfile location on the server
     var logDir  = new Folder(espnCore.logPath.format(userid));
-    var logfile = new File("{0}/systemlog.txt".format(logDir.fullName);
+    var logfile = new File("{0}/systemlog.txt".format(logDir.fullName));
     // preflight checks
     if (userid === undefined || userid === null) 
         return false;
