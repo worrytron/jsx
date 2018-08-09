@@ -16,13 +16,33 @@ $.evalFile(new File($.fileName).parent.fsName.toString() + '/json2.js');
 var scriptRoot = new File($.fileName).parent.parent.parent.fsName;
 
 espnCore = {
-    'schema'       : [1.0, 1.1],
-    'version'      : [1,1,0],
+    'version'      : 1.1,
+    'schema'       : 1.1,
+    'revision'     : 0,
     'date'         : "7/15/2017",
-    'logs'         : scriptRoot + "/.logs/{0}",
+    'logPath'      : scriptRoot + "/.logs/{0}",
     'prodJson'     : scriptRoot + "/.json/{0}/{1}.json",
     'globJson'     : scriptRoot + "/.json/{0}.json"
 };
+
+function CheckSchema (v) {
+    var log = new Log();
+    var chk = true;
+    if (v == undefined) {
+        log.write(1, "Invalid JSON data passed to CheckSchema()")
+        chk = false;
+    }
+    if (v != espnCore.schema) {
+        log.write(1, "The JSON data being accessed is of an unspported version.");
+        chk = false;
+    } 
+    return chk;
+}
+
+function OsPath (str) {
+    return str.replace('Y:', '/Volumes/cagenas');
+}
+
 /*************************************************************************************************
  * DATABASE VIRTUAL OBJECTS
  * These objects assist in conveniently accessing data from static JSON databases.
@@ -37,15 +57,36 @@ espnCore = {
  * @param {string} id - the database key for the production. If undefined, will instance a
  * null ProductionData object.
  */
-function SportData ( id ) {
-    var globalDb = espnCore['globJson'].format('productions');
-    var prod_db = getJson( globalDb );
-    if (!prod_db){
-        alert('Issue loading global production database.');
-        return null;
-    } else {
-        return prod_db;
+function Production (id) {
+    var log = new Log();
+    var prodData = {'NULL': null};
+    var prodDbPath = espnCore['globJson'].format('productions');
+    try {
+        var prodDb = getJson( prodDbPath );
+
+    } catch(e) {
+        log.write(0, "There was a problem loading the sports/production database.", e);
     }
+
+    if (CheckSchema(prodDb.schema)) {
+        try {
+            prodData = prodDb[id];
+        } catch(e) {
+            log.write(1, 'Requested production id not found. The default production was loaded.')
+            prodData = prodDb['NULL'];
+        }
+        var prodSubfolders = prodData.folders;
+        for (var subf in prodSubfolders) {
+            if (!prodDbSubfolders.hasOwnProperty(subf)) continue;
+            prodSubfolders[subf] = OsPath(prodData['root']) + prodSubfolders[subf];
+        }
+    
+    }
+}
+
+function SportData (id) {
+    var log = new Log();
+
 }
 
 illegalCharacters = /[.,`~!@#$%^&*()=+\[\]]/;
@@ -59,7 +100,7 @@ illegalCharacters = /[.,`~!@#$%^&*()=+\[\]]/;
   * organization of the files.
   * @param {string} platform - The platformid of the software the logs will be generated from.
   */
-function Log ( platform ) {
+function Log () {
     // "level" is the level of information that the log will actually write (0: errors only,
     // 1: warnings & errors, 2: info, warnings & errors)
     var level   = 1;
@@ -69,13 +110,11 @@ function Log ( platform ) {
         userid  = $.getenv("USERNAME");
     else userid = "OSXUSER";
     // logfile location on the server
-    var logDir  = new Folder(espnCore["logs"].format(userid));
-    var logfile = new File("{0}/{1}.txt".format(logDir.fullName, platform));
+    var logDir  = new Folder(espnCore.logPath.format(userid));
+    var logfile = new File("{0}/systemlog.txt".format(logDir.fullName);
     // preflight checks
     if (userid === undefined || userid === null) 
         return false;
-    if (platform === undefined || platform === "")
-        platform = "sys";
     if (!logDir.exists) 
         createFolder(logDir);
     /*
