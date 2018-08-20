@@ -144,14 +144,23 @@ function PipelineScene() {
         if (this.linked === 1) {
             this._populateDashboard();           // build dashboard text layers
             this._populateGuidelayer();          // assemble bottomline template
-            //this._populateLogosheetComp('team'); // import team logosheets
-            //this._populateLogosheetComp('away'); // away sheets
-            //this._populateLogosheetComp('show'); // show sheets
-            //this._populateLogosheetComp('sponsor');
+            //this._populateLogosheetComp(prod, 'team'); // import team logosheets
+            //this._populateLogosheetComp(prod, 'away'); // away sheets
+            //this._populateLogosheetComp(prod, 'show'); // show sheets
+            //this._populateLogosheetComp(prod, 'sponsor');
+
             //this._populateCustomAssets();
-            //this._buildAllLogosheetPrecomps();
+            //this.BuildTemplatePrecomps(prod);
         }
-    }
+    };
+
+    this.LoadIntoTemplate = function (prod, type) {
+        // 'team'
+        // 'away'
+        // 'show'
+        // 'sponsor'
+        // custom
+    };
     /*
      * This builds and sets up the dashboard comp for the project. This is mostly text layers
      * that are used for toolkit expression links. These text layers get changed directly when 
@@ -175,7 +184,7 @@ function PipelineScene() {
             "CUSTOM TEXT D"
         ];
 
-        //try {
+        try {
             // Build a null used for scaling
             var pNull = this.dashboard.layer('Scaler Null');
             if (!pNull) {
@@ -205,10 +214,10 @@ function PipelineScene() {
             // after building the text layers, set the scale of the null
             pNull.transform.scale.setValue([scale,scale,scale]);
             pNull.transform.position.setValue([65,80,0]);
-        //} catch (e) {
-        //    this.log.write(0, "There was a problem building dashboard text layers.", e);
-        //}        
-    }
+        } catch (e) {
+            this.log.write(0, "There was a problem building dashboard text layers.", e);
+        }        
+    };
     /* TODO: COMMENTS
     */
     this._createDashboardTextLayer = function (layerName, parent, pos, pNull) {
@@ -240,7 +249,7 @@ function PipelineScene() {
         textLayer.locked = true;
 
         return [labelLayer, textLayer];
-    }
+    };
     /*
      * Build the precomp used for the guide layer in WIP renders. Includes the bottom line
      * aend a project name / version / timecode burn-in at the bottom of the screen.
@@ -277,7 +286,7 @@ function PipelineScene() {
         // add the timecode and project name layers
         var tcLayer = buildTextLayer('', this.bottomline, tcPos, font, fontSize, 0, 'Timecode', true);
         tcLayer.text.sourceText.expression = "timeToTimecode();";
-    }
+    };
     /* TODO: COMMENTS
     */
     this._populateLogosheetComp = function (type) {
@@ -358,24 +367,31 @@ function PipelineScene() {
     /*
      * Builds the logo slick precomps set up in the production's platform database (ae.json)
      */
-    this._buildAllLogosheetPrecomps = function () {
-        // Get the precomp layout from the platform database (only teams right now)
-        var teamLayout = this.sceneData.prod.getPlatformData()['Team Logosheet'];
-        var showLayout = this.sceneData.prod.getPlatformData()['Show Logosheet'];
-        
-        try {
-            buildComps( teamLayout, this.homeLogosheetComp, this.precompsBin, 'HOME ' );
-            buildComps( teamLayout, this.awayLogosheetComp, this.precompsBin, 'AWAY ' );
-            buildComps( showLayout, this.showLogosheetComp, this.precompsBin );
-        } catch(e) {
-            this.sceneData.log.write(WARN, CODE['failed_build'], e);
+    this.BuildTemplatePrecomps = function (prod) {
+        if (prod === undefined) {
+            prod = 'NULL';
         }
+        // Get the precomp layout from the platform database (only teams right now)
+        var bin = getItem(lookup(Template, 'precomps_bin'));
+
+        var teamLayout = loadLayout(prod, 'Team Logosheet');
+        var showLayout = loadLayout(prod, 'Show Logosheet');
+
+        this._createCompsFromLayout( teamLayout, this.teamLogosheet, bin, 'HOME ' );
+        this._createCompsFromLayout( teamLayout, this.awayLogosheet, bin, 'AWAY ' );
+        this._createCompsFromLayout( showLayout, this.showLogosheet, bin );
+
+        return true;
+    }
+
+    function loadLayout (prod) {
+        return;
     }
     /*
      * Builds the comps for a logosheet based on the JSON data stored in the production's ae.json.
      * 'tag' is an optional flag that will prepend a string to the precomp names (e.g. for HOME and AWAY)
      */
-    function buildLogosheetPrecomps (layout, sheet, bin, tag, skipExisting) {
+    this._createCompsFromLayout = function (layout, sheet, bin, tag, skipExisting) {
         (skipExisting === undefined) ? skipExisting = true : skipExisting = false;
         // c is a comp defined in the logosheet JSON data
         for (c in layout){
@@ -402,7 +418,7 @@ function PipelineScene() {
                 layer.scale.setValue(layout[c]["Scl"]);
                 layer.collapseTransformation = true;                    
             } catch(e) {
-                this.sceneData.log.write(WARN, CODE['missing_template'], e);
+                this.log.write(1, 'There was a problem building the precomp for ' + name + '.', e);
             }
         }
     }
