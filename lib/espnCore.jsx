@@ -32,7 +32,7 @@ espnCore = {
     'date'     : "7/15/2017",
     'logPath'  : "/v/temp/logs/{0}",
     'prodJson' : "/v/dev/ESPNTools/json/{0}/{1}.json",
-    'globJson' : "/v/dev/ESPNTools/json/{0}.json"
+    'globJson' : "/v/dev/ESPNTools/json/productions.json"
 };
 
 
@@ -75,10 +75,10 @@ function OsPath (str) {
 
  // FIGURE THIS OUT
 
-function ValidateJson (lookup_id, json_address) {
+function ValidateJson (json_path, lookup_id) {
     var log = new Log();
     var data = {'INVALID': null};
-    var jsonPath = espnCore[json_address[0]].format(json_address[1], json_address[2]);
+    //var jsonPath = espnCore[json_address[0]].format(json_address[1], json_address[2]);
     var jsonRaw  = getJson( jsonPath );
     if (jsonRaw === undefined){
         log.write(0, "There was a problem loading the JSON data: {0}".format(json_address.toString()));
@@ -89,21 +89,6 @@ function ValidateJson (lookup_id, json_address) {
             data = jsonRaw['NULL'];
         }
     } return data;
-}
-
-function ProductionFolders (id) {
-    var log = new Log();
-    var address = ["globJson", "productions", null];
-    var prodData = ValidateJson(id, address);
-
-    var prodSubfolders = prodData.folders;
-    for (var subf in prodSubfolders) {
-        if (!prodSubfolders.hasOwnProperty(subf)) continue;
-        prodSubfolders[subf] = OsPath(prodData['root']) + prodSubfolders[subf];
-    }
-    prodData.folders = prodSubfolders;
-
-    return prodData.folders;
 }
 
 function TeamData (id) {

@@ -41,7 +41,20 @@ var template = {
     }]
 }
 
-function PipelineScene() {
+function ProductionData (id) {
+    var prod = ValidateJson(espnCore.globJson, id);
+    prod.animroot      = prod.root + prod.animroot;
+    prod.teamlogos3d   = prod.root + prod.teamlogos3d;
+    prod.showlogos3d   = prod.root + prod.showlogos3d;
+    prod.textures      = prod.root + prod.textures;
+    prod.customasset01 = prod.root + prod.customasset01;
+    prod.customasset02 = prod.root + prod.customasset02;
+    prod.customasset03 = prod.root + prod.customasset03;
+    prod.customasset04 = prod.root + prod.customasset04;
+    prod.customasset05 = prod.root + prod.customasset05;
+}
+
+function PipelineScene () {
     // attach logging function
     this.log = new Log('ae');
     // forward declarations
