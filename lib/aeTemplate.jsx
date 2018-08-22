@@ -9,7 +9,7 @@ var EDIT_BAT_FILE   = new File("~/editRenderList.bat");
 
 function ProductionData (id) {
     var log = new Log('ae');
-    var prod = ValidateJson(espnCore.globJson, id);
+    var prod = ValidateJson(espnCore.prodJson, id);
     try {
         prod.animroot      = prod.root + prod.animroot;
         prod.teamlogos3d   = prod.root + prod.teamlogos3d;
@@ -405,7 +405,6 @@ function PipelineScene () {
             }
         }
     }
-
     /*********************************************************************************************
      * UTILITY FUNCTIONS
      * These are helper functions for pulling and setting scenedata
@@ -427,7 +426,6 @@ function PipelineScene () {
 
         return renderComps;
     }
-
     /*********************************************************************************************
     RENDER QUEUEING
     *********************************************************************************************/
