@@ -13,28 +13,19 @@
 
 $.evalFile(new File($.fileName).parent.fsName.toString() + '/json2.js');
 
-var scriptRoot = new File($.fileName).parent.parent.parent.fsName;
-/*
 espnCore = {
-    'version'      : 1.1,
-    'schema'       : 1.1,
-    'revision'     : 0,
-    'date'         : "7/15/2017",
-    'logPath'      : scriptRoot + "/.logs/{0}",
-    'prodJson'     : scriptRoot + "/.json/{0}/{1}.json",
-    'globJson'     : scriptRoot + "/.json/{0}.json"
-};*/
-
-espnCore = {
-    'version'  : 1.1,
-    'schema'   : 1.1,
-    'revision' : 0,
-    'date'     : "7/15/2017",
-    'logPath'  : "/v/temp/logs/{0}",
-    'prodJson' : "/v/dev/ESPNTools/json/{0}/{1}.json",
-    'globJson' : "/v/dev/ESPNTools/json/productions.json"
+    'version'          : 1.1,
+    'schema'           : 1.1,
+    'revision'         : 0,
+    'date'             : "7/15/2017",
+    'logPath'          : "/v/temp/logs",
+    'rootJson'         : "/v/dev/ESPNTools/json",
+    'prodJson'         : "/v/dev/ESPNTools/json/productions.json",
+    'templateJson'     : "/v/dev/ESPNTools/json/template.json",
+    "teamLogosheets"   : "Y:/Workspace/MASTER_ASSETS/Logosheets/Teams",
+    "showLogosheets"   : "Y:/Workspace/MASTER_ASSETS/Logosheets/Shows",
+    "miscLogosheets"   : "Y:/Workspace/MASTER_ASSETS/Logosheets/Misc"
 };
-
 
 function CheckSchema (data) {
     var log = new Log();
@@ -117,7 +108,7 @@ function Log () {
         userid  = $.getenv("USERNAME");
     else userid = "OSXUSER";
     // logfile location on the server
-    var logDir  = new Folder(espnCore.logPath.format(userid));
+    var logDir  = new Folder(espnCore.logPath + "/" + userid);
     var logfile = new File("{0}/systemlog.txt".format(logDir.fullName));
     // preflight checks
     if (userid === undefined || userid === null) 

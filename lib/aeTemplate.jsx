@@ -7,51 +7,23 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/aeCore.jsx');
 var RENDER_BAT_FILE = new File("~/aeRenderList.bat");
 var EDIT_BAT_FILE   = new File("~/editRenderList.bat");
 
-var template = {
-    "dashboard" : ["0. Dashboard", "CompItem", {}],
-    "precomps_bin"  : ["1. TOOLKIT PRECOMPS", "FolderItem", {
-        "awaysheet" : ["Away Logosheet Master Switch", "CompItem", {}],
-        "teamsheet" : ["Team Logosheet Master Switch", "CompItem", {}],
-        "showsheet" : ["Show Logosheet Master Switch", "CompItem", {}]
-    }],
-    "working_bin" : ["2. WORKING FOLDER", "FolderItem", {}],
-    "render_bin"  : ["3. RENDER COMPS", "FolderItem", {}],
-    "tech_bin"    : ["X. DO NOT EDIT", "FolderItem", {
-        "assets_bin": ["Asset Bin", "FolderItem", {
-            "guides_bin" : ["Guidelayers", "FolderItem", {
-                "bottomline": ["Guidelayers", "CompItem", {}]
-            }],
-            "team0_bin" : ["Team Logo Sheets", "FolderItem", {}],
-            "team1_bin" : ["Away Logo Sheets", "FolderItem", {}],
-            "spon0_bin" : ["Sponsor Logo Sheets", "FolderItem", {}],
-            "show0_bin" : ["Show Logo Sheets", "FolderItem", {}],
-            "asset1_bin" : ["Custom Asset 01", "FolderItem", {}],
-            "asset2_bin" : ["Custom Asset 02", "FolderItem", {}],
-            "asset3_bin" : ["Custom Asset 03", "FolderItem", {}],
-            "asset4_bin" : ["Custom Asset 04", "FolderItem", {}],
-            "asset5_bin" : ["Custom Asset 05", "FolderItem", {}],
-            "script_bin" : ["Script Holders", "FolderItem", {
-                "awayScript" : ["Away Script", "CompItem", {}],
-                "teamScript" : ["Team Script", "CompItem", {}],
-                "showScript" : ["Show Script", "CompItem", {}],
-                "custScript" : ["Custom Text Script", "CompItem", {}]
-            }]
-        }],
-        "wiprenderbin": ["WIP Render Comps", "FolderItem", {}]
-    }]
-}
-
 function ProductionData (id) {
+    var log = new Log('ae');
     var prod = ValidateJson(espnCore.globJson, id);
-    prod.animroot      = prod.root + prod.animroot;
-    prod.teamlogos3d   = prod.root + prod.teamlogos3d;
-    prod.showlogos3d   = prod.root + prod.showlogos3d;
-    prod.textures      = prod.root + prod.textures;
-    prod.customasset01 = prod.root + prod.customasset01;
-    prod.customasset02 = prod.root + prod.customasset02;
-    prod.customasset03 = prod.root + prod.customasset03;
-    prod.customasset04 = prod.root + prod.customasset04;
-    prod.customasset05 = prod.root + prod.customasset05;
+    try {
+        prod.animroot      = prod.root + prod.animroot;
+        prod.teamlogos3d   = prod.root + prod.teamlogos3d;
+        prod.showlogos3d   = prod.root + prod.showlogos3d;
+        prod.textures      = prod.root + prod.textures;
+        prod.customasset01 = prod.root + prod.customasset01;
+        prod.customasset02 = prod.root + prod.customasset02;
+        prod.customasset03 = prod.root + prod.customasset03;
+        prod.customasset04 = prod.root + prod.customasset04;
+        prod.customasset05 = prod.root + prod.customasset05;
+    } catch (e) {
+        log.write(0, "There was an error parsing production data.", e);
+    }
+    return prod;
 }
 
 function PipelineScene () {
@@ -59,7 +31,7 @@ function PipelineScene () {
     this.log = new Log('ae');
     // forward declarations
     this.awayLogosheet = null;
-    this.teamLogosheet = null;
+    this.homeLogosheet = null;
     this.showLogosheet = null;
     this.awayScript = null;   
     this.teamScript = null;   
@@ -68,9 +40,11 @@ function PipelineScene () {
     this.bottomline = null;   
     this.renderBin = null;    
     this.wipRenderBin = null; 
+    this.template = {};
 
     // initialization tree
     this.Init = function() {
+        this.template = ValidateJson(espnCore.templateJson, "ae_template");
         this.Link();
         if (this.linked == 1)
             this.GetMetadata();
@@ -82,16 +56,16 @@ function PipelineScene () {
         this.dashboard = getItem("0. Dashboard");
         if (isValid(this.dashboard)){
             // check for rest of template objects
-            this.awayLogosheet  = getItem(lookup(template, "awaysheet"));
-            this.teamLogosheet  = getItem(lookup(template, "teamsheet"));
-            this.showLogosheet  = getItem(lookup(template, "showsheet"));
-            this.awayScript     = getItem(lookup(template, "awayScript"));
-            this.teamScript     = getItem(lookup(template, "teamScript"));
-            this.showScript     = getItem(lookup(template, "showScript"));
-            this.custScript     = getItem(lookup(template, "custScript"));
-            this.bottomline     = getItem(lookup(template, "bottomline"));
-            this.renderBin      = getItem(lookup(template, "render_bin"), FolderItem);
-            this.wipRenderBin   = getItem(lookup(template, "wiprenderbin"), FolderItem);            
+            this.awayLogosheet  = getItem(lookup(this.template, "awaysheet"));
+            this.homeLogosheet  = getItem(lookup(this.template, "teamsheet"));
+            this.showLogosheet  = getItem(lookup(this.template, "showsheet"));
+            this.awayScript     = getItem(lookup(this.template, "awayScript"));
+            this.teamScript     = getItem(lookup(this.template, "teamScript"));
+            this.showScript     = getItem(lookup(this.template, "showScript"));
+            this.custScript     = getItem(lookup(this.template, "custScript"));
+            this.bottomline     = getItem(lookup(this.template, "bottomline"));
+            this.renderBin      = getItem(lookup(this.template, "render_bin"), FolderItem);
+            this.wipRenderBin   = getItem(lookup(this.template, "wiprenderbin"), FolderItem);            
             this.TestLink();
         }
     };
@@ -102,7 +76,7 @@ function PipelineScene () {
         if (!isValid(this.awayLogosheet)) {
             this.log.write(1, msg.format('Away Logosheet'));
             this.linked = 0;
-        } if (!isValid(this.teamLogosheet)) {
+        } if (!isValid(this.homeLogosheet)) {
             this.log.write(1, msg.format('Home Logosheet'));
             this.linked = 0;
         } if (!isValid(this.showLogosheet)) {
@@ -147,39 +121,31 @@ function PipelineScene () {
      * the dashboard, etc.) 
      * This can all be rolled into one function at some point -- right now it is really slow.
      */
-    this.BuildTemplate = function() {
-        // Check for platform-specific JSON & load it if necessary
+    this.BuildTemplate = function (prod) {
         // Build the bin/folder tree from JSON
-        buildTemplateFromJson( template );
-        
+        buildTemplateFromJson(this.template);
+
         this.Link(); // reattach scene links after building the template
-
+        // load production data
+        if (prod === undefined) prod = 'NULL';
+        //prod = new ProductionData(prod);
         if (this.linked === 1) {
-            this._populateDashboard();           // build dashboard text layers
-            this._populateGuidelayer();          // assemble bottomline template
-            //this._populateLogosheetComp(prod, 'team'); // import team logosheets
-            //this._populateLogosheetComp(prod, 'away'); // away sheets
-            //this._populateLogosheetComp(prod, 'show'); // show sheets
-            //this._populateLogosheetComp(prod, 'sponsor');
-
-            //this._populateCustomAssets();
-            //this.BuildTemplatePrecomps(prod);
+            this.BuildDashboard();           // build dashboard text layers
+            this.BuildGuidelayer();          // assemble bottomline template
+            this.ImportLogosheet(prod, 'home'); // import team logosheets
+            this.ImportLogosheet(prod, 'away'); // away sheets
+            this.ImportLogosheet(prod, 'show'); // show sheets
+            this.ImportLogosheet(prod, 'misc'); // misc sheets
+            //this.ImportCustom(prod);         // custom assets
+            this.BuildAutoPrecomps(prod);    // build auto precomps
         }
-    };
-
-    this.LoadIntoTemplate = function (prod, type) {
-        // 'team'
-        // 'away'
-        // 'show'
-        // 'sponsor'
-        // custom
     };
     /*
      * This builds and sets up the dashboard comp for the project. This is mostly text layers
      * that are used for toolkit expression links. These text layers get changed directly when 
      * the user interacts with the UI.
      */
-    this._populateDashboard = function () {
+    this.BuildDashboard = function () {
         // Text layer names for versioning
         var textLayers = [
             "SHOW NAME",
@@ -231,43 +197,11 @@ function PipelineScene () {
             this.log.write(0, "There was a problem building dashboard text layers.", e);
         }        
     };
-    /* TODO: COMMENTS
-    */
-    this._createDashboardTextLayer = function (layerName, parent, pos, pNull) {
-        var labelLayer = this.dashboard.layer(layerName + ' Label');
-        var textLayer = this.dashboard.layer(layerName);
-        // Font settings
-        var font = "Tw Cen MT Condensed";
-        var fontSizeBig = 90;
-        var fontSizeSm = 33;
-
-        if (!labelLayer) // if the label layer doesn't exist, build it
-            labelLayer = buildTextLayer(layerName, this.dashboard, pos, font, fontSizeSm, 0, (layerName + ' Label'), false);
-        else { // otherwise make sure it's in the right position
-            labelLayer.locked = false;
-            labelLayer.transform.position.setValue(pos);
-        }
-
-        if (!textLayer) // if the text layer doesn't exist, build it
-            textLayer = buildTextLayer(layerName, this.dashboard, pos+[0,70,0], font, fontSizeBig, 0, layerName, false);
-        else { // otherwise make sure it's in the right position
-            textLayer.locked = false;
-            textLayer.transform.position.setValue(pos+[0,70,0]);
-        }
-        // TODO: Fix the bug here where the scale doesn't reset to 100%
-        // parent the text layers to the scaling null
-        labelLayer.parent = pNull;
-        labelLayer.locked = true;
-        textLayer.parent = pNull;
-        textLayer.locked = true;
-
-        return [labelLayer, textLayer];
-    };
     /*
      * Build the precomp used for the guide layer in WIP renders. Includes the bottom line
      * aend a project name / version / timecode burn-in at the bottom of the screen.
      */
-    this._populateGuidelayer = function () {
+    this.BuildGuidelayer = function () {
         // Text layer settings
         var font = "Tw Cen MT Condensed";
         var fontSize = 67;
@@ -300,63 +234,66 @@ function PipelineScene () {
         var tcLayer = buildTextLayer('', this.bottomline, tcPos, font, fontSize, 0, 'Timecode', true);
         tcLayer.text.sourceText.expression = "timeToTimecode();";
     };
-    /* TODO: COMMENTS
-    */
-    this._populateLogosheetComp = function (type) {
+    /*
+     * TODO: COMMENTS
+     */
+    this.ImportLogosheet = function (prod, type) {
         function AIFile (fileObj) {
             if (fileObj.name.indexOf('.ai') > -1)
                 return true;
         }
-        // NULL productions cannot be built or repaired
-        if (this.sceneData.prod.name === "NULL") return false;
-        
-        var logosheetComp = getItem( lookup(Template,'{0}sheet'.format(type)) );
-        var logosheetBin = getItem( lookup(Template,'{0}{1}_bin'.format(type_, t)));
-
-        var asset; // avitem that represents the asset
-        var lyr; // the layer of the asset
-        // blame me for setting this up so badly
-        // the template lookups use "team0" and "team1" as keys. everything else uses
-        // "home" and "away".
-        // type_ and t then become situational variables to resolve the mismatch when applicable.
-        var t = 0
-        var type_ = type;
-        if (type === 'away'){
-            t = 1;
-            type_ = 'team';
-        }
-
-        try {
-            if (firstFile === undefined)
+        // Forward declarations
+        var path = "~/";  // main path where logosheets are stored
+        var bin  = null;  // bin for this particular logosheet type
+        var comp = null;  // comp for this logosheet type
+        var ai   = null;  // ai file object
+        var item = null;  // the AE AVitem for the ai file
+        var lyr  = null;  // layer for the AVitem
+        // Populate forward declarations
+        if (type == "home") {
+            path = espnCore.homeLogosheet;
+            bin = getItem("Team Logo Sheets", FolderItem);
+            comp = this.homeLogosheet;
+        else if (type == "away") {
+            path = espnCore.awayLogosheet;
+            bin = getItem("Away Logo Sheets", FolderItem);
+            comp = this.awayLogosheet;
+        } else if (type == "show") {
+            path = espnCore.showLogosheet;
+            bin = getItem("Show Logo Sheets", FolderItem);
+            comp = this.showLogosheet;
+        } /*else if (type == "misc") {
+            path = espnCore.miscLogosheet;
+            bin = getItem("Sponsor Logo Sheets", FolderItem);
+        }*/
+        // Import any available logosheet and put it in the correct bin
+        if (bin.numItems === 0){
+            path = new Folder(path + "/" + prod);
+            ai = path.getFiles(AIFile)[0]; // first logosheet in the folder
+            if (!path.exists || !ai.exists) {
+                this.log.write(0, "There was an error loading the {0} logosheet for production: {1}.".format(type, prod));
                 return false;
-
-            // import the logosheet if none exists
-            if (logosheetBin.numItems === 0) {
-                var assetFolder = new Folder( this.sceneData.getFolder("{0}logos2d".format(type_)) );
-                var firstFile = assetFolder.getFiles(AIFile)[0];
-                asset = importFile(firstFile, assetFolder);
-            } else {
-                asset = logosheetBin.item(1);
             }
-
-            // add the loaded logosheet to the comp
-            try {
-                lyr = logosheetComp.layer(1);
-            } catch(e) {
-                lyr = logosheetComp.layers.add(asset);
-            }
-            lyr.collapseTransformation = true;
-
-        } catch(e) {
-            this.log.write(WARN, "loadShowAssets: " + CODE['failed_biuld'], e);
+            item = importFile(ai, bin);
+        } else {
+            item = bin.item(1);
         }
-    }
+        // Clear out the logosheet comp and re-add the AI as a layer
+        while (true) {
+            try { comp.layer(1).remove(); } 
+            catch (e) { break; }
+        }
+        lyr = comp.layers.add(item);
+        lyr.collapseTransformation = true;
+
+        return true;
+    };
     /*
      * This looks for any custom asset bins in the current project and will load the correct
      * custom asset footage into the bin.
      */
-    this._populateCustomAssets = function () {
-        if (this.sceneData.prod.name === "NULL") return false;
+    this.ImportCustom = function (prod) {
+        if (prod === "NULL") return false;
         // Look for each custom asset
         for (var i=1; i<=NUM_CUSTOM_ASSETS; i++) {
             try {
@@ -373,33 +310,66 @@ function PipelineScene () {
                 }
             // Log any errors
             } catch(e) { 
-                this.log.write(ERR, CODE['failed_build'], e);
+                //this.log.write(ERR, CODE['failed_build'], e);
             }
         }
-    }
+    };
     /*
      * Builds the logo slick precomps set up in the production's platform database (ae.json)
      */
-    this.BuildTemplatePrecomps = function (prod) {
+    this.BuildAutoPrecomps = function (prod) {
+        function loadAutoLayout (prod, layout) {
+            var layout = {};
+            var path   = espnCore.rootJson + "/" + prod + "/ae.json";
+            return ValidateJson(path, layout);
+        }
         if (prod === undefined) {
             prod = 'NULL';
         }
         // Get the precomp layout from the platform database (only teams right now)
-        var bin = getItem(lookup(Template, 'precomps_bin'));
+        var bin = getItem(lookup(this.template, 'precomps_bin'), FolderItem);
 
-        var teamLayout = loadLayout(prod, 'Team Logosheet');
-        var showLayout = loadLayout(prod, 'Show Logosheet');
+        var teamLayout = loadAutoLayout(prod, 'Team Logosheet');
+        var showLayout = loadAutoLayout(prod, 'Show Logosheet');
 
-        this._createCompsFromLayout( teamLayout, this.teamLogosheet, bin, 'HOME ' );
+        this._createCompsFromLayout( teamLayout, this.homeLogosheet, bin, 'HOME ' );
         this._createCompsFromLayout( teamLayout, this.awayLogosheet, bin, 'AWAY ' );
         this._createCompsFromLayout( showLayout, this.showLogosheet, bin );
 
         return true;
-    }
+    };
+    /* TODO: COMMENTS
+    */
+    this._createDashboardTextLayer = function (layerName, parent, pos, pNull) {
+        var labelLayer = this.dashboard.layer(layerName + ' Label');
+        var textLayer = this.dashboard.layer(layerName);
+        // Font settings
+        var font = "Tw Cen MT Condensed";
+        var fontSizeBig = 90;
+        var fontSizeSm = 33;
 
-    function loadLayout (prod) {
-        return;
-    }
+        if (!labelLayer) // if the label layer doesn't exist, build it
+            labelLayer = buildTextLayer(layerName, this.dashboard, pos, font, fontSizeSm, 0, (layerName + ' Label'), false);
+        else { // otherwise make sure it's in the right position
+            labelLayer.locked = false;
+            labelLayer.transform.position.setValue(pos);
+        }
+
+        if (!textLayer) // if the text layer doesn't exist, build it
+            textLayer = buildTextLayer(layerName, this.dashboard, pos+[0,70,0], font, fontSizeBig, 0, layerName, false);
+        else { // otherwise make sure it's in the right position
+            textLayer.locked = false;
+            textLayer.transform.position.setValue(pos+[0,70,0]);
+        }
+        // TODO: Fix the bug here where the scale doesn't reset to 100%
+        // parent the text layers to the scaling null
+        labelLayer.parent = pNull;
+        labelLayer.locked = true;
+        textLayer.parent = pNull;
+        textLayer.locked = true;
+
+        return [labelLayer, textLayer];
+    };
     /*
      * Builds the comps for a logosheet based on the JSON data stored in the production's ae.json.
      * 'tag' is an optional flag that will prepend a string to the precomp names (e.g. for HOME and AWAY)
