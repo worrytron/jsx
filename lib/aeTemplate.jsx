@@ -251,21 +251,21 @@ function PipelineScene () {
         var lyr  = null;  // layer for the AVitem
         // Populate forward declarations
         if (type == "home") {
-            path = espnCore.homeLogosheet;
+            path = espnCore.teamLogosheets;
             bin = getItem("Team Logo Sheets", FolderItem);
             comp = this.homeLogosheet;
-        else if (type == "away") {
-            path = espnCore.awayLogosheet;
+        } else if (type == "away") {
+            path = espnCore.teamLogosheets;
             bin = getItem("Away Logo Sheets", FolderItem);
             comp = this.awayLogosheet;
         } else if (type == "show") {
-            path = espnCore.showLogosheet;
+            path = espnCore.showLogosheets;
             bin = getItem("Show Logo Sheets", FolderItem);
             comp = this.showLogosheet;
-        } /*else if (type == "misc") {
-            path = espnCore.miscLogosheet;
+        } else if (type == "misc") {
+            path = espnCore.miscLogosheets;
             bin = getItem("Sponsor Logo Sheets", FolderItem);
-        }*/
+        }
         // Import any available logosheet and put it in the correct bin
         if (bin.numItems === 0){
             path = new Folder(path + "/" + prod);
@@ -319,9 +319,9 @@ function PipelineScene () {
      */
     this.BuildAutoPrecomps = function (prod) {
         function loadAutoLayout (prod, layout) {
-            var layout = {};
             var path   = espnCore.rootJson + "/" + prod + "/ae.json";
-            return ValidateJson(path, layout);
+            var data   = ValidateJson(path, layout);
+            return data;
         }
         if (prod === undefined) {
             prod = 'NULL';
@@ -432,7 +432,7 @@ function PipelineScene () {
     this.AddRenderCompsToQueue = function () {
         var movName;
         var outputDir;
-        var renderComps = getRenderComps();
+        var renderComps = this.GetRenderComps();
                 
         // deactivate all current items
         var RQitems = app.project.renderQueue.items;

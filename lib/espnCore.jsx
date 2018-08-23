@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Tools and objects to map ESPN's animation production databases into ExtendScript for use in
  * Adobe graphics platforms such as AfterEffects, Photoshop, and Illustrator.
  *
@@ -22,9 +22,9 @@ espnCore = {
     'rootJson'         : "/v/dev/ESPNTools/json",
     'prodJson'         : "/v/dev/ESPNTools/json/productions.json",
     'templateJson'     : "/v/dev/ESPNTools/json/template.json",
-    "teamLogosheets"   : "Y:/Workspace/MASTER_ASSETS/Logosheets/Teams",
-    "showLogosheets"   : "Y:/Workspace/MASTER_ASSETS/Logosheets/Shows",
-    "miscLogosheets"   : "Y:/Workspace/MASTER_ASSETS/Logosheets/Misc"
+    'teamLogosheets'   : "Y:/Workspace/ASSETS/Logosheets/Teams",
+    'showLogosheets'   : "Y:/Workspace/ASSETS/Logosheets/Shows",
+    'miscLogosheets'   : "Y:/Workspace/ASSETS/Logosheets/Misc"
 };
 
 function CheckSchema (data) {
@@ -70,7 +70,7 @@ function ValidateJson (json_path, lookup_id) {
     var log = new Log();
     var data = {'INVALID': null};
     //var jsonPath = espnCore[json_address[0]].format(json_address[1], json_address[2]);
-    var jsonRaw  = getJson( jsonPath );
+    var jsonRaw  = getJson( json_path );
     if (jsonRaw === undefined){
         log.write(0, "There was a problem loading the JSON data: {0}".format(json_address.toString()));
     } else if (CheckSchema(jsonRaw)) {
@@ -182,7 +182,7 @@ function Log () {
             logfile.close();
         }
         // Alert the user on errors (if the platform supports it)
-        if (lv === 0 && platform === "ae"){
+        if (lv === 0){// && platform === "ae"){
             alert(message);
             if (e) alert(e.stack);
         }

@@ -156,7 +156,7 @@ function buildTemplateFromJson (data, parent) {
                 item = app.project.items.addFolder(data[k][0]);
             if (parent) item.parentFolder = parent;
             // folders can have children, so recurse into its child object
-            buildProjectFromJson( data[k][2], item);
+            buildTemplateFromJson( data[k][2], item);
         }
         else if (data[k][1] === "CompItem") {
             if (!item)
