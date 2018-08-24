@@ -49,7 +49,6 @@ function PipelineScene () {
         if (this.linked == 1)
             this.GetMetadata();
     };
-
     // probe scene for template objects
     this.Link = function () {
         this.linked = -1;
@@ -69,7 +68,6 @@ function PipelineScene () {
             this.TestLink();
         }
     };
-
     // set linked flag
     this.TestLink = function () {
         var msg = "A piece of the template was missing: {0}. You may need to repair it.";
@@ -107,11 +105,19 @@ function PipelineScene () {
             this.linked = 1;
         }
     };
-
-    this.GetMetadata = function() {
-        var metadata = null;
+    // todo: comments
+    this.GetMetadata = function () {
+        var metadata = {};
+        var comment = this.dashboard.comment;
+        metadata = JSON.parse(comment);
+        return metadata;
     };
-
+    // todo: comments
+    this.SetMetadata = function ( metadata ) {
+        metadata = JSON.stringify(metadata);
+        this.dashboard.comment = metadata;
+    };
+    
     /*********************************************************************************************
     TEMPLATE BUILDERS
     *********************************************************************************************/
@@ -535,15 +541,6 @@ function PipelineScene () {
             return true;
         } else return false;
     }
-
-    this.SetMetadata = function () {
-
-    }
-
-    this.GetMetadata = function () {
-
-    }
-
     /*********************************************************************************************
      * SWITCH FUNCTIONS
      * These functions directly alter the linked After Effects project.
