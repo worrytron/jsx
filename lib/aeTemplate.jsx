@@ -437,6 +437,16 @@ function PipelineScene () {
     /*
      * todo: comments
      */
+    this.UpdatePaths = function () {
+        this.SetFileName();
+        var meta = this.GetMetadata();
+        this.projectPath = new Folder(meta.root + "/" + meta.project);
+        this.scenePath = new Folder(meta.root + "/" + meta.project + '/ae');
+        this.renderPath = new Folder(meta.root + "/" + meta.project + '/qt_final');
+    }
+    /*
+     * todo: comments
+     */
     this.Save = function () {
         this.UpdatePaths();
         if (!this.projectPath.exists) {
@@ -447,14 +457,6 @@ function PipelineScene () {
         app.project.save(this.scenePath + "/" + this.fileName + ".aep");
         // todo: figure out backups
         return true;
-    }
-
-    this.UpdatePaths = function () {
-        this.SetFileName();
-        var meta = this.GetMetadata();
-        this.projectPath = new Folder(meta.root + "/" + meta.project);
-        this.scenePath = new Folder(meta.root + "/" + meta.project + '/ae');
-        this.renderPath = new Folder(meta.root + "/" + meta.project + '/qt_final');
     }
     /*********************************************************************************************
      RENDER QUEUEING
