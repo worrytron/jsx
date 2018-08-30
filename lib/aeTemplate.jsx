@@ -24,10 +24,13 @@ function PipelineScene () {
     this.template = {};
     // output files
     this.fileName = "";
+    this.projectPath = new Folder("~/");
+    this.scenePath   = new Folder("~/");
+    this.renderPath  = new Folder("~/");
 
     // initialization tree
     this.Init = function() {
-        this.template = ValidateJson(espnCore.templateJson, "ae_template");
+        this.template = validateJson(espnCore.templateJson, "ae_template");
         this.Link();
         //if (this.linked == 1)
             //this.GetMetadata();
@@ -302,7 +305,7 @@ function PipelineScene () {
     this.BuildAutoPrecomps = function (prod) {
         function loadAutoLayout (prod, layout) {
             var path   = espnCore.rootJson + "/" + prod + "/ae.json";
-            var data   = ValidateJson(path, layout);
+            var data   = validateJson(path, layout);
             return data;
         }
         if (prod === undefined) {
@@ -435,31 +438,39 @@ function PipelineScene () {
      * todo: comments
      */
     this.Save = function () {
-        this.SetFileName();
-        var meta = this.GetMetadata();
-        var path = new Folder(meta.root + meta.project);
-        if (!path.exists) {
+        this.UpdatePaths();
+        if (!this.projectPath.exists) {
             // todo : add alert!!!
             path = createProject(meta.root, meta.project, 'ae');
             this.log.write(2, "Project " + meta.project + " was created at " + meta.root);
         }
-        var fullPath = new File(path.toString() + "/" + this.fileName + ".aep");
-        app.project.save(fullPath);
+        app.project.save(this.scenePath + "/" + this.fileName + ".aep");
         // todo: figure out backups
-        return null;
+        return true;
+    }
+
+    this.UpdatePaths = function () {
+        this.SetFileName();
+        var meta = this.GetMetadata();
+        this.projectPath = new Folder(meta.root + "/" + meta.project);
+        this.scenePath = new Folder(meta.root + "/" + meta.project + '/ae');
+        this.renderPath = new Folder(meta.root + "/" + meta.project + '/qt_final');
     }
     /*********************************************************************************************
      RENDER QUEUEING
     *********************************************************************************************/
     // todo: comments
     this.QueueRenders = function () {
+        var fileName = "";
+        this.UpdatePaths();
         clearRenderQueue();
         for (var i=1; i<=this.renderCompBin.items.length; i++){
-            renderComps.push(this.renderCompBin.items[i]);
-            addCompToQueue(this.renderCompBin.items[i], null, null);
+            var comp = this.renderCompBin.item(i);
+            fileName = [this.renderPath, comp.name, this.fileName];
+            fileName = fileName.join("_") + ".mov";
+            addCompToQueue(this.renderCompBin.item(i), fileName, null);
         }               
         // removed WIP render options in 1.1
-        return renderComps;
     }
     
     this.AddProjectToBatch = function () {
