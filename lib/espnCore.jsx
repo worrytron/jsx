@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Tools and objects to map ESPN's animation production databases into ExtendScript for use in
  * Adobe graphics platforms such as AfterEffects, Photoshop, and Illustrator.
  *
@@ -26,66 +26,6 @@ espnCore = {
     'showLogosheets'   : "Y:/Workspace/ASSETS/Logosheets/Shows",
     'miscLogosheets'   : "Y:/Workspace/ASSETS/Logosheets/Misc"
 };
-
-function CheckSchema (data) {
-    var log = new Log();
-    var chk = true;
-    var v = data["ESPN_META_CAGE"]["schema"];
-    if (v == undefined) {
-        log.write(1, "Invalid JSON data passed to CheckSchema()")
-        chk = false;
-    }
-    if (v != espnCore.schema) {
-        log.write(1, "The JSON data being accessed is of an unspported version.");
-        chk = false;
-    } 
-    return chk;
-}
-
-function OsPath (str) {
-    if ($.os.indexOf('Macintosh') > -1) {
-        str = str.replace('Y:', '/Volumes/cagenas');
-    }
-    return str;
-}
-
-/*************************************************************************************************
- * DATABASE VIRTUAL OBJECTS
- * These objects assist in conveniently accessing data from static JSON databases.
- * If we ever switch to Mongo or whatever, these will be mapped into that platform instead.
- ************************************************************************************************/
-/**
- * ProductionData is an object to load and validate essential information about a Production. It
- * contains a copy of the teams.json and platform.json and keeps them updated to limit the number
- * of times the JSON has to be accessed on the server (for speed).
- * @class ProductionData
- * @constructor
- * @param {string} id - the database key for the production. If undefined, will instance a
- * null ProductionData object.
- */
-
- // FIGURE THIS OUT
-
-function ValidateJson (json_path, lookup_id) {
-    var log = new Log();
-    var data = {'INVALID': null};
-    //var jsonPath = espnCore[json_address[0]].format(json_address[1], json_address[2]);
-    var jsonRaw  = getJson( json_path );
-    if (jsonRaw === undefined){
-        log.write(0, "There was a problem loading the JSON data: {0}".format(json_address.toString()));
-    } else if (CheckSchema(jsonRaw)) {
-        data = jsonRaw[lookup_id];
-        if (data === undefined) {
-            log.write(1, "Requested id not found in the database. ({0}) -- Default data loaded.".format(lookup_id));
-            data = jsonRaw['NULL'];
-        }
-    } return data;
-}
-
-function TeamData (id) {
-    var log = new Log();
-    var address = ["prodJson", "teams"];
-}
 
 illegalCharacters = /[.,`~!@#$%^&*()=+\[\]]/;
 
@@ -226,7 +166,47 @@ function getJson (fileRef) {
         // TODO - ERROR (?) -- HANDLE OLD VERSIONS OF DATABASE SCHEMA --
         // POSSIBLY JUST A CUSTOM ERROR TO OPEN A LEGACY VERSION OF ESPNTOOLS?
     }/**/
-	return db;
+    return db;
+}
+/*
+ * todo: comments
+ */
+function validateJson (json_path, lookup_id) {
+    var log = new Log();
+    var data = {'INVALID': null};
+    //var jsonPath = espnCore[json_address[0]].format(json_address[1], json_address[2]);
+    var jsonRaw  = getJson( json_path );
+    if (jsonRaw === undefined){
+        log.write(0, "There was a problem loading the JSON data: {0}".format(json_address.toString()));
+    } 
+    //var valid = CheckSchema(jsonRaw);
+    //if (valid === true) {
+        data = jsonRaw[lookup_id];
+        if (data === undefined) {
+            log.write(1, "Requested id not found in the database. ({0}) -- Default data loaded.".format(lookup_id));
+            data = jsonRaw['NULL'];
+        }
+    //} 
+    return data;
+}
+/*
+ * todo: comments
+ */
+function checkSchema (data) {
+    var log = new Log();
+    var chk = true;
+    if (data == undefined)
+      return null;
+    var v = data["ESPN_META_CAGE"]["schema"];
+    if (v == undefined) {
+        log.write(1, "Invalid JSON data passed to CheckSchema()")
+        chk = false;
+    }
+    if (v != espnCore.schema) {
+        log.write(1, "The JSON data being accessed is of an unspported version.");
+        chk = false;
+    } 
+    return chk;
 }
 
 /*************************************************************************************************
@@ -262,10 +242,23 @@ function createFolders (root, map) {
 /*
  * Creates a project folder structure for the given SceneData object
  */
-function createProject (sceneData) {
-    var projectRoot = sceneData.getFolder('projectroot');
-    projectRoot = createFolder( projectRoot );
-    createFolders( projectRoot.fullName, sceneData.prod.projstruct );
+function createProject (root_, project, plat) {
+    if (plat == undefined) plat = "";
+    var projStructJS = espnCore.rootJson + "/projectfolders.json";
+    var projStruct = ValidateJson(projStructJS, "PROJECT");
+    var projRoot = root_ + "/" + project;
+    createFolder( projRoot );
+    createFolders( projRoot, projStruct );
+    return projRoot + "/" + plat;
+}
+/* 
+ * todo: comments
+ */
+function osPath (str) {
+    if ($.os.indexOf('Macintosh') > -1) {
+        str = str.replace('Y:', '/Volumes/cagenas');
+    }
+    return str;
 }
 
 /*************************************************************************************************
@@ -333,6 +326,27 @@ function getGlobalAssets() {
     var globalAssetData = getJson( assetJson );
     return globalAssetData;
 }
+/**
+ * todo: comments
+ */
+function getProductionFolders (id) {
+    var log = new Log();
+    var prod = ValidateJson(espnCore.prodJson, id);
+    try {
+        prod.animroot      = prod.root + prod.animroot;
+        prod.teamlogos3d   = prod.root + prod.teamlogos3d;
+        prod.showlogos3d   = prod.root + prod.showlogos3d;
+        prod.textures      = prod.root + prod.textures;
+        prod.customasset01 = prod.root + prod.customasset01;
+        prod.customasset02 = prod.root + prod.customasset02;
+        prod.customasset03 = prod.root + prod.customasset03;
+        prod.customasset04 = prod.root + prod.customasset04;
+        prod.customasset05 = prod.root + prod.customasset05;
+    } catch (e) {
+        log.write(0, "There was an error parsing production data.", e);
+    }
+    return prod;
+}
 
 /*************************************************************************************************
  * MISCELLANEOUS STUFF
@@ -349,6 +363,36 @@ function timestamp () {
     t = (t[0] + t[1]);
     return ('_{0}_{1}'.format(d, t));
 }
+function lookup ( obj, lookup ) {
+    function search ( obj, key ){
+        var result;
+        for (var k in obj) {
+            if (obj.hasOwnProperty(k)) {
+                if (k === key) {             
+                    return obj[k][0];
+                } else if ( JSON.stringify( obj[k][2] ) !== JSON.stringify({}) ){
+                    result = search( obj[k][2], key );
+                    if (result) return result;
+                }
+            } else continue;
+        }
+    } 
+    return search(obj, lookup);
+}
+function lookup2 ( obj, key ){
+    var result;
+    for (var k in obj) {
+        if (obj.hasOwnProperty(k)) {
+            if (k === key) {             
+                return obj[k][0];
+            } else if ( JSON.stringify( obj[k][2] ) !== JSON.stringify({}) ){
+                result = search( obj[k][2], key );
+                if (result) return result;
+            }
+        } else continue;
+    }
+    return null;
+} 
 /**
   * This function takes a number and returns it as a string with preceding zeroes.
   * examples: 
@@ -366,7 +410,6 @@ function zeroFill (number, width){
     var i = (number + "");
     return i; // always return a string
 }
-
 Array.prototype.indexOf = function (searchElement, fromIndex) {
     var k;
     // 1. Let o be the result of calling ToObject passing
@@ -414,41 +457,7 @@ Array.prototype.indexOf = function (searchElement, fromIndex) {
       k++;
     }
     return -1;
-
 };
-
-function lookup ( obj, lookup ) {
-    function search ( obj, key ){
-        var result;
-        for (var k in obj) {
-            if (obj.hasOwnProperty(k)) {
-                if (k === key) {             
-                    return obj[k][0];
-                } else if ( JSON.stringify( obj[k][2] ) !== JSON.stringify({}) ){
-                    result = search( obj[k][2], key );
-                    if (result) return result;
-                }
-            } else continue;
-        }
-    } 
-    return search(obj, lookup);
-}
-
-function lookup2 ( obj, key ){
-    var result;
-    for (var k in obj) {
-        if (obj.hasOwnProperty(k)) {
-            if (k === key) {             
-                return obj[k][0];
-            } else if ( JSON.stringify( obj[k][2] ) !== JSON.stringify({}) ){
-                result = search( obj[k][2], key );
-                if (result) return result;
-            }
-        } else continue;
-    }
-    return null;
-} 
-
 String.prototype.format = function () {
     // Adds a .format() method to the String prototype, similar to python
     var formatted = this;
@@ -458,7 +467,6 @@ String.prototype.format = function () {
     }
     return formatted;
 };
-
 String.prototype.toComment = function (){
   var converted = this;
   var arr = converted.split('\n');

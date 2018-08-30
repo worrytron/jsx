@@ -7,28 +7,9 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/aeCore.jsx');
 var RENDER_BAT_FILE = new File("~/aeRenderList.bat");
 var EDIT_BAT_FILE   = new File("~/editRenderList.bat");
 
-function ProductionData (id) {
-    var log = new Log('ae');
-    var prod = ValidateJson(espnCore.prodJson, id);
-    try {
-        prod.animroot      = prod.root + prod.animroot;
-        prod.teamlogos3d   = prod.root + prod.teamlogos3d;
-        prod.showlogos3d   = prod.root + prod.showlogos3d;
-        prod.textures      = prod.root + prod.textures;
-        prod.customasset01 = prod.root + prod.customasset01;
-        prod.customasset02 = prod.root + prod.customasset02;
-        prod.customasset03 = prod.root + prod.customasset03;
-        prod.customasset04 = prod.root + prod.customasset04;
-        prod.customasset05 = prod.root + prod.customasset05;
-    } catch (e) {
-        log.write(0, "There was an error parsing production data.", e);
-    }
-    return prod;
-}
-
 function PipelineScene () {
     // attach logging function
-    this.log = new Log('ae');
+    this.log = new Log();
     // forward declarations
     this.awayLogosheet = null;
     this.homeLogosheet = null;
@@ -41,13 +22,15 @@ function PipelineScene () {
     this.renderBin = null;    
     this.wipRenderBin = null; 
     this.template = {};
+    // output files
+    this.fileName = "";
 
     // initialization tree
     this.Init = function() {
         this.template = ValidateJson(espnCore.templateJson, "ae_template");
         this.Link();
-        if (this.linked == 1)
-            this.GetMetadata();
+        //if (this.linked == 1)
+            //this.GetMetadata();
     };
     // probe scene for template objects
     this.Link = function () {
@@ -105,19 +88,7 @@ function PipelineScene () {
             this.linked = 1;
         }
     };
-    // todo: comments
-    this.GetMetadata = function () {
-        var metadata = {};
-        var comment = this.dashboard.comment;
-        metadata = JSON.parse(comment);
-        return metadata;
-    };
-    // todo: comments
-    this.SetMetadata = function ( metadata ) {
-        metadata = JSON.stringify(metadata);
-        this.dashboard.comment = metadata;
-    };
-    
+
     /*********************************************************************************************
     TEMPLATE BUILDERS
     *********************************************************************************************/
@@ -141,7 +112,7 @@ function PipelineScene () {
             this.ImportLogosheet(prod, 'home'); // import team logosheets
             this.ImportLogosheet(prod, 'away'); // away sheets
             this.ImportLogosheet(prod, 'show'); // show sheets
-            this.ImportLogosheet(prod, 'misc'); // misc sheets
+            //this.ImportLogosheet(prod, 'misc'); // misc sheets
             //this.ImportCustom(prod);         // custom assets
             this.BuildAutoPrecomps(prod);    // build auto precomps
         }
@@ -275,9 +246,14 @@ function PipelineScene () {
         // Import any available logosheet and put it in the correct bin
         if (bin.numItems === 0){
             path = new Folder(path + "/" + prod);
-            ai = path.getFiles(AIFile)[0]; // first logosheet in the folder
-            if (!path.exists || !ai.exists) {
-                this.log.write(0, "There was an error loading the {0} logosheet for production: {1}.".format(type, prod));
+            if (path.exists) {
+                ai = path.getFiles(AIFile)[0]; // first logosheet in the folder
+            } else {
+                this.log.write(0, "There was no production {0} logosheet folder for {1}".format(type, prod));
+                return false;
+            }
+            if (ai == undefined) {
+                this.log.write(0, "There was no production {0} logosheet folder for {1}".format(type, prod));
                 return false;
             }
             item = importFile(ai, bin);
@@ -411,60 +387,81 @@ function PipelineScene () {
             }
         }
     }
+
     /*********************************************************************************************
      * UTILITY FUNCTIONS
      * These are helper functions for pulling and setting scenedata
      ********************************************************************************************/
-    this.GetRenderComps = function () {
-        if (!this.TestLink()){
-            this.sceneData.log.write(ERR, CODE['missing_template']);
+    // todo: comments
+    this.GetMetadata = function () {
+        var metadata = {};
+        var comment = this.dashboard.comment;
+        metadata = JSON.parse(comment);
+        return metadata;
+    };
+    // todo: comments
+    this.SetMetadata = function ( metadata ) {
+        metadata = JSON.stringify(metadata);
+        this.dashboard.comment = metadata;
+    };
+    /*
+     * todo: comments
+     */
+    this.SetFileName = function () {
+        var meta = this.GetMetadata();
+        var nameArr = [meta.project, meta.scene];
+
+        if (meta.filename_show == true)
+            nameArr.push(meta.show);
+        if (meta.filename_team0 == true)
+            nameArr.push(meta.team0);
+        if (meta.filename_team1 == true)
+            nameArr.push(meta.team1);
+        if (meta.filename_misc == true)
+            nameArr.push(meta.misc);
+        if (meta.filename_customA == true)
+            nameArr.push(meta.customA);
+        if (meta.filename_customB == true)
+            nameArr.push(meta.customB);
+        if (meta.filename_customC == true)
+            nameArr.push(meta.customC);
+        if (meta.filename_customD == true)
+            nameArr.push(meta.customD);
+
+        this.fileName = nameArr.join("_").split(" ").join("");
+        return true;
+    }
+    /*
+     * todo: comments
+     */
+    this.Save = function () {
+        this.SetFileName();
+        var meta = this.GetMetadata();
+        var path = new Folder(meta.root + meta.project);
+        if (!path.exists) {
+            // todo : add alert!!!
+            path = createProject(meta.root, meta.project, 'ae');
+            this.log.write(2, "Project " + meta.project + " was created at " + meta.root);
         }
-        // prep objects 
-        var renderComps = [];
-
-        var outputDir = this.sceneData.getFolder("qt_final");
-        // check for the bin with the render comps
-        // array all render comps
-        for (var i=1; i<=this.renderCompBin.items.length; i++){
-            renderComps.push(this.renderCompBin.items[i]);
-        }               
-        // removed WIP render options in 1.1
-
-        return renderComps;
+        var fullPath = new File(path.toString() + "/" + this.fileName + ".aep");
+        app.project.save(fullPath);
+        // todo: figure out backups
+        return null;
     }
     /*********************************************************************************************
-    RENDER QUEUEING
+     RENDER QUEUEING
     *********************************************************************************************/
-    this.AddRenderCompsToQueue = function () {
-        var movName;
-        var outputDir;
-        var renderComps = this.GetRenderComps();
-                
-        // deactivate all current items
-        var RQitems = app.project.renderQueue.items;
-        for (var i=1; i<=RQitems.length; i++){
-            try {
-                RQitems[i].render = false;
-            } catch(e) { null; }
-        }
-        try {
-            for (c in renderComps){
-                if (!renderComps.hasOwnProperty(c)) continue;
-                var rqi = RQitems.add( renderComps[c] );
-                rqi.outputModules[1].applyTemplate("QT RGBA STRAIGHT")
-                movName = sceneData.getRenderName(renderComps[c].name, "mov");
-                if (wip === undefined){
-                    outputDir = sceneData.getFolder("qt_final");    
-                } else {
-                    outputDir = sceneData.getFolder("qt_wip"); 
-                }
-                rqi.outputModules[1].file = new File (outputDir +'/'+ movName); 
-            }            
-        } catch(e) {
-            sceneData.log.write(ERR, CODE['failed_queue'], e);
-        }
+    // todo: comments
+    this.QueueRenders = function () {
+        clearRenderQueue();
+        for (var i=1; i<=this.renderCompBin.items.length; i++){
+            renderComps.push(this.renderCompBin.items[i]);
+            addCompToQueue(this.renderCompBin.items[i], null, null);
+        }               
+        // removed WIP render options in 1.1
+        return renderComps;
     }
-
+    
     this.AddProjectToBatch = function () {
         // opens the bat file, adds a new line with the scene, and closes it
         var aepFile = app.project.file.fsName.toString();
@@ -495,51 +492,6 @@ function PipelineScene () {
     this.StartNewBatch = function () {
         RENDER_BAT_FILE.open("w");
         RENDER_BAT_FILE.close();
-    }
-
-    /*
-     * When the liveScene is ready to be synchronized to AfterEffects and saved to the network,
-     * this function pushes the tempScene to the liveScene, verifies that the handoff was successful,
-     * prompts the user for overwrite confirmation (if necessary). Once that's done, it saves the
-     * file (and its backup) to the network. 
-     */
-    this.SaveWithBackup = function (ignore_warning) {
-        (!ignore_warning) ? ignore_warning = false : ignore_warning = true;
-        
-        var sync = pushTempToLive();
-        if (!sync || 
-            sceneData.status === STATUS.NO_DEST || 
-            sceneData.status === STATUS.CHECK_DEST || 
-            sceneData.status === STATUS.UNDEFINED) {
-            
-            sceneData.log.write(ERR, CODE['invalid_scenedata']);
-            return false;
-        }
-        // STATUS.OK_WARN means that the save location is valid, but there's an existing file there.
-        // Therefore the user must confirm that this is what they want to do.
-        if ( sceneData.status === STATUS.OK_WARN && ignore_warning === false){
-            var msg = 'This will overwrite an existing scene. Continue?';
-            if (!Window.confirm(msg)) return false;
-        }
-        // Final check for correct status flags -- 
-        if ( sceneData.status === STATUS.OK || 
-             sceneData.status === STATUS.OK_WARN ){
-            // get a filename for the scene
-            var aepFile = new File(sceneData.getFullPath()['primary']);
-            // save the file
-            try {
-                app.project.save(aepFile);
-            } catch (e) {
-                sceneData.log.write(ERR, CODE['failed_save'], e);
-            }
-            // make a copy of the file as a backup
-            try {
-                aepFile.copy( sceneData.getFullPath()['backup'] );
-             } catch (e) { 
-                sceneData.log.write(ERR, CODE['failed_backup'], e);
-            }/**/
-            return true;
-        } else return false;
     }
     /*********************************************************************************************
      * SWITCH FUNCTIONS
@@ -640,22 +592,6 @@ function PipelineScene () {
         } catch(e) {
             this.log.write(0, CODE['missing_textlayers'], e);
         }
-    }
-    /*
-     * Sets the this.sceneData metadata on the pipelined scene's dashboard tag
-     * TODO: THIS NEEDS A TOTAL OVERHAUL
-     */
-    this.SwitchDashboardTag = function () {
-        try {
-            this.dashboard.comment = this.sceneData.getTag().toString();
-            setDashboardLayer('PROJECT_NAME', this.sceneData.project.toString());
-            setDashboardLayer('SCENE_NAME', this.sceneData.name.toString());
-            setDashboardLayer('VERSION', 'v' + zeroFill(this.sceneData.version.toString(), 3));
-        } catch (e) {
-            tempScene.log.write(ERR, CODE['failed_tagging'], e);
-            return false;
-        }
-        return true;
     }
     /*
      * This function scans the custom assets bins and looks for the first word in the name

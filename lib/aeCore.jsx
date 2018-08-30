@@ -72,6 +72,26 @@ function importFile (file, parent) {
 }
 
 /**
+ * todo: comments
+ */
+function addCompToQueue (comp, out_path, out_module) {
+    var queueItems = app.project.renderQueue.items;
+    var rqi = queItems.add(comp);
+
+    if (out_path != undefined || out_path != null) {
+        rqi.outputModules[1].file = new File(out_path);
+    }
+    if (out_module != undefined || out_module != null) {
+        if (rqi.outputModules[1].templates.indexOf(out_module) == -1) {
+            var preset = new ImportOptions(new File('//cagenas/Workspace/SCRIPTS/AE/assets/{0}_preset.aep'.format(out_module.toLowercase())));
+            createOutputModule(preset, out_module);
+        }        
+        setOutputModule(out_module);
+    }
+    return true;
+}
+
+/**
  * Sets the comment value on a specified item in the project window
  * @params {AVItem} item - The AVItem to be commented
  * @params {string} comment - The comment to be added
