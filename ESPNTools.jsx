@@ -1047,7 +1047,7 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
     function loadTeamAssets () {
         // This function is used to filter only .ai files when passed to Folder.getFiles()
         function AIFile (fileObj) {
-            if (fileObj.name.indexOf('.ai') > -1)
+            if (fileObj.name.indexOf('.ai') > -1 && (fileObj.name[0] != "."))
                 return true;
         }
         // Don't load team assets for "NULL" production.
@@ -1117,7 +1117,7 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
      */
     function loadShowAssets () {
         function AIFile (fileObj) {
-            if (fileObj.name.indexOf('.ai') > -1)
+            if (fileObj.name.indexOf('.ai') > -1 && (fileObj.name[0] != "."))
                 return true;
         }
         // Don't load show assets for "NULL" production
@@ -1164,6 +1164,10 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
      * custom asset footage into the bin.
      */
     function loadCustomAssets () {
+        function MacOSFilter (fileObj) {
+            if (fileObj.name[0] != ".")
+                return true;
+        }
         if (liveScene.prod.name === "NULL") return false;
         // Look for each custom asset
         for (var i=1; i<=NUM_CUSTOM_ASSETS; i++) {
@@ -1196,7 +1200,7 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
     function loadOfflineAssets (tag) {
         if (tag === undefined) return false;
         function AIFile (fileObj) {
-            if (fileObj.name.indexOf('.ai') > -1)
+            if (fileObj.name.indexOf('.ai') > -1 && (fileObj.name[0] != "."))
                 return true;
         }
         // SPECIAL CASES
