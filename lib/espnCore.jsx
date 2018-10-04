@@ -23,8 +23,8 @@ var scriptRoot = new File($.fileName).parent.parent.parent.fsName;
 
 espnCore = {
     'schema'       : [1.0, 1.0],
-    'version'      : [1,0,3],
-    'date'         : "12/15/2017",
+    'version'      : [1,0,4],
+    'date'         : "10/04/2018",
     'platform'     : null,
     'dashboard'    : "0. Dashboard",
     'logs'         : scriptRoot + "/.logs/{0}",
