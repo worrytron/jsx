@@ -1089,9 +1089,13 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
             try {
                 lyr = homeLogosheetComp.layer(1);
             } catch(e) {
-                lyr = homeLogosheetComp.layers.add(homeAiFile);
+                null;
             }
-            lyr.collapseTransformation = true;
+
+            if (lyr == undefined) {
+                lyr = homeLogosheetComp.layers.add(homeAiFile);
+                lyr.collapseTransformation = true;
+            }
             
             // And the away team
             if (awayLogosheetBin.numItems === 0){
@@ -1099,16 +1103,21 @@ $.evalFile(((new File($.fileName)).parent).toString() + '/lib/espnCore.jsx');
                 awayAiFile.parentFolder = awayLogosheetBin;
             }
             // And the away comp
+            lyr = undefined;
             try {
                 lyr = awayLogosheetComp.layer(1);
             } catch(e) {
-                lyr = awayLogosheetComp.layers.add(awayAiFile);
+                null;
             }
-            lyr.collapseTransformation = true;
+            if (lyr == undefined) {
+                lyr = awayLogosheetComp.layers.add(awayAiFile);
+                lyr.collapseTransformation = true;                
+            }
             
             return true;       
             
         } catch(e) {
+            alert(e.line);
             liveScene.log.write(ERR, "loadTeamAssets: " + errorMessages['failed_build'], e);
         }
     }
@@ -1711,7 +1720,7 @@ if (scene != '') (project + '_' + scene + ' v{3}') else (project + ' v{3}');""".
     function addProjectToBatch () {
         // opens the bat file, adds a new line with the scene, and closes it
         var aepFile = app.project.file.fsName.toString();
-        var execStr = "\"C:\\Program Files\\Adobe\\Adobe After Effects CC 2015\\Support Files\\aerender.exe\" -mp -project \"{0}\"".format(aepFile);
+        var execStr = "\"C:\\Program Files\\Adobe\\Adobe After Effects CC 2018\\Support Files\\aerender.exe\" -mp -project \"{0}\"".format(aepFile);
         RENDER_BAT_FILE.open("a");
         try{
             RENDER_BAT_FILE.writeln(execStr);            
